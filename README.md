@@ -53,3 +53,7 @@ integration path, not a unit-test matrix over each module's edge cases
 (what happens on a mid-frame CRC flip, a BRAM read/write collision on the
 exact same cycle, a zero-length ITCH message). Worth knowing before you
 trust this the way you'd trust a project with per-module unit tests.
+
+---
+
+Made with ❤️ in India by [Krishna Anubhav](https://github.com/heykav).
