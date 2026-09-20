@@ -14,3 +14,11 @@ target_link_libraries(fpga-sim-demo PRIVATE fpga-sim-core)
 
 enable_testing()
 add_test(NAME fpga-sim-demo COMMAND fpga-sim-demo)
+
+add_executable(test-phy-pcs tests/test_phy_pcs.cpp)
+target_link_libraries(test-phy-pcs PRIVATE fpga-sim-core)
+add_test(NAME test-phy-pcs COMMAND test-phy-pcs)
+
+add_executable(test-parser-itch50 tests/test_parser_itch50.cpp)
+target_link_libraries(test-parser-itch50 PRIVATE fpga-sim-core)
+add_test(NAME test-parser-itch50 COMMAND test-parser-itch50)

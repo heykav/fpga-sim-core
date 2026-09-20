@@ -25,6 +25,15 @@ struct PcsResult {
     std::size_t payload_length = 0;
 };
 
+// Named `66b` for the block shape it shares with IEEE 802.3 clause 49 (a
+// 64-bit payload region plus a framing bit, deserialized 7 bytes at a
+// time) - it is NOT full 64b/66b line coding. Real 64b/66b carries a 2-bit
+// sync header distinguishing data/control blocks and self-synchronizing
+// scrambling (x^58 + x^39 + 1); this model has neither, and instead uses a
+// single sync-marker bit plus a trailing CRC32 for framing/integrity. That
+// is a deliberate scope cut for a latency model that cares about block
+// timing, not physical-layer conformance - but it means this class should
+// not be read as a certified 802.3 PCS implementation.
 class Deserializer66b {
 public:
     static constexpr std::size_t bytes_per_block = 7;

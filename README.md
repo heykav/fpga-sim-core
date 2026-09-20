@@ -21,7 +21,10 @@ is the fix.
 
 The datapath itself models:
 
-- 64b/66b PCS block-lock and CRC32 validation primitives.
+- PCS block-lock and CRC32 validation primitives, in a block shape inspired
+  by 64b/66b (`Deserializer66b`) but without its scrambler or control-block
+  sync header — see the doc comment on that class before assuming 802.3
+  conformance.
 - AXI4-Stream 512-bit framing with IPG verification.
 - Zero-copy big-endian NASDAQ ITCH 5.0 parsing for `A`, `E`, and `X`.
 - Five-level synchronous dual-port BRAM with collision assertions.
@@ -43,16 +46,22 @@ The demo reports the deterministic latency histogram and writes
 
 ## What "tests" actually means here
 
-`ctest` currently runs one target: the demo binary itself, which asserts
-on the way through that PCS block-lock and CRC came back valid, the MAC
+`ctest` runs three targets. `fpga-sim-demo` is the end-to-end integration
+path: it asserts that PCS block-lock and CRC came back valid, the MAC
 framer's IPG check and both packet accepts passed, the DMA's `post_write`
 and MSI-X assert fired, the consumed byte count matched the source ITCH
-message, and the order book actually saw a trade. That's a real
-end-to-end invariant check, not just "didn't segfault" — but it's one
-integration path, not a unit-test matrix over each module's edge cases
-(what happens on a mid-frame CRC flip, a BRAM read/write collision on the
-exact same cycle, a zero-length ITCH message). Worth knowing before you
-trust this the way you'd trust a project with per-module unit tests.
+message, and the order book actually saw a trade. `test-phy-pcs` and
+`test-parser-itch50` are real per-module unit tests: the CRC32 is checked
+against the official CRC-32/ISO-HDLC check vector (`crc32("123456789") ==
+0xCBF43926`), the PCS block encode/decode is round-tripped (including a
+non-block-aligned payload and a deliberately corrupted block to confirm
+`crc_valid` actually goes false), and the ITCH parser is checked against
+hand-built messages at the documented NASDAQ TotalView-ITCH 5.0 byte
+offsets, including truncated and unknown-type inputs.
+
+Still not covered: BRAM read/write collision on the exact same cycle, and
+the PCIe/DMA and MAC-framer modules beyond what the integration path
+exercises. That's real remaining scope, not swept under "tests pass."
 
 ---
 
