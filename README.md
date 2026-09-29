@@ -1,5 +1,10 @@
 # fpga-sim-core
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/hero-dark.svg">
+  <img alt="fpga-sim-core banner: a terminal window showing the demo's min 14, median 15, p99 19 and max 20 simulated cycles beside a waveform of the clock, tick_valid and ofi signals from the real VCD trace. Simulated cycles, synthetic input, not a hardware measurement." src="docs/img/hero-light.svg">
+</picture>
+
 A deterministic C++20 cycle model of a tick-to-trade datapath (wire, PCS,
 MAC framing, ITCH parse, order book, order-flow imbalance, DMA), clocked at
 322.265625 MHz. One cycle is 1 / 322.265625 MHz = 512/165 ns = 3.10303... ns.
@@ -113,6 +118,45 @@ OFI from best-level changes (Cont-Kukanov-Stoikov, shares): cumulative = 400, pe
 order book adds dropped (side full): 0
 VCD trace: fpga_sim_core.vcd
 ```
+
+## Figures
+
+All figures below are generated from the simulator's own output (the demo's
+stdout, the VCD it writes, and the stage parameters read from the headers) by
+`scripts/make_figures.py`, and are labelled *simulated cycles, synthetic input,
+not a hardware measurement*. They are the same 256 synthetic messages as the
+sample output above, not market data and not a hardware measurement.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/pipeline-dark.svg">
+  <img alt="Pipeline diagram: PCS, MAC, ITCH parser (2 cycles, fixed parameter), order book (1 cycle, fixed parameter), quote RAM (latency 1), OFI (3 stages) and DMA post (2 cycles, fixed parameter). Solid boxes are derived or executed by the module; dashed boxes are fixed documented model parameters." src="docs/img/pipeline-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/latency-histogram-dark.svg">
+  <img alt="Histogram of tick-to-trade latency for 256 synthetic messages in simulated cycles: 130 in 14-15, 121 in 16-17, 4 in 18-19, 1 in 20-21; median 15 and p99 19 cycles." src="docs/img/latency-histogram-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/summary-card-dark.svg">
+  <img alt="Summary card: min 14, median 15, p99 19, max 20 simulated cycles for 256 synthetic messages, 5339 cycles simulated." src="docs/img/summary-card-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/waveform-dark.svg">
+  <img alt="Waveform of the VCD trace written by the demo: a full-trace overview and a 40-cycle zoom of clk, tick_valid and the signed ofi bus." src="docs/img/waveform-light.svg">
+</picture>
+
+Regenerate after building (the SVGs are deterministic for identical input;
+`social-preview.png` additionally needs a Chromium binary, and is also what to
+upload as the repository social preview in the GitHub settings):
+
+```sh
+python3 scripts/make_figures.py --demo /tmp/fpga-build/fpga-sim-demo
+```
+
+Only the standard library is used (plain SVG generation); nothing is added to
+the C++ build.
 
 ## What "tests" actually means here
 

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<title id="t">fpga-sim-core</title>
+<desc id="d">Deterministic C++20 tick-to-trade cycle model. Latency in simulated cycles.</desc>
+<rect x="0" y="0" width="1280" height="640" fill="#0d1117"/>
+<line x1="0" y1="0" x2="0" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="40" y1="0" x2="40" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="80" y1="0" x2="80" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="120" y1="0" x2="120" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="160" y1="0" x2="160" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="200" y1="0" x2="200" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="240" y1="0" x2="240" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="280" y1="0" x2="280" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="320" y1="0" x2="320" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="360" y1="0" x2="360" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="400" y1="0" x2="400" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="440" y1="0" x2="440" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="480" y1="0" x2="480" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="520" y1="0" x2="520" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="560" y1="0" x2="560" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="600" y1="0" x2="600" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="640" y1="0" x2="640" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="680" y1="0" x2="680" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="720" y1="0" x2="720" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="760" y1="0" x2="760" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="800" y1="0" x2="800" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="840" y1="0" x2="840" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="880" y1="0" x2="880" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="920" y1="0" x2="920" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="960" y1="0" x2="960" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1000" y1="0" x2="1000" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1040" y1="0" x2="1040" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1080" y1="0" x2="1080" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1120" y1="0" x2="1120" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1160" y1="0" x2="1160" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1200" y1="0" x2="1200" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1240" y1="0" x2="1240" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="1280" y1="0" x2="1280" y2="640" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="0" x2="1280" y2="0" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="40" x2="1280" y2="40" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="80" x2="1280" y2="80" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="120" x2="1280" y2="120" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="160" x2="1280" y2="160" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="200" x2="1280" y2="200" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="240" x2="1280" y2="240" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="280" x2="1280" y2="280" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="320" x2="1280" y2="320" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="360" x2="1280" y2="360" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="400" x2="1280" y2="400" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="440" x2="1280" y2="440" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="480" x2="1280" y2="480" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="520" x2="1280" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="560" x2="1280" y2="560" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="600" x2="1280" y2="600" stroke="#21262d" stroke-width="1"/>
+<line x1="0" y1="640" x2="1280" y2="640" stroke="#21262d" stroke-width="1"/>
+<rect x="56" y="56" width="1168" height="528" fill="#0d1117" rx="14" stroke="#30363d" stroke-width="2"/>
+<text x="96" y="150" font-size="84" fill="#e6edf3" text-anchor="start" font-weight="bold">fpga-sim-core</text>
+<text x="96" y="198" font-size="27" fill="#8b949e" text-anchor="start" font-weight="normal">deterministic C++20 cycle model of a tick-to-trade datapath</text>
+<text x="96" y="232" font-size="22" fill="#3fb950" text-anchor="start" font-weight="normal">wire &gt; PCS &gt; MAC &gt; ITCH &gt; book &gt; OFI &gt; DMA</text>
+<rect x="96" y="268" width="250" height="130" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="116" y="302" font-size="17" fill="#8b949e" text-anchor="start" font-weight="bold">min</text>
+<text x="116" y="368" font-size="62" fill="#e6edf3" text-anchor="start" font-weight="bold">14</text>
+<text x="208" y="368" font-size="20" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<rect x="366" y="268" width="250" height="130" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="386" y="302" font-size="17" fill="#8b949e" text-anchor="start" font-weight="bold">median</text>
+<text x="386" y="368" font-size="62" fill="#3fb950" text-anchor="start" font-weight="bold">15</text>
+<text x="478" y="368" font-size="20" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<rect x="636" y="268" width="250" height="130" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="656" y="302" font-size="17" fill="#8b949e" text-anchor="start" font-weight="bold">p99</text>
+<text x="656" y="368" font-size="62" fill="#e3b341" text-anchor="start" font-weight="bold">19</text>
+<text x="748" y="368" font-size="20" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<rect x="906" y="268" width="250" height="130" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="926" y="302" font-size="17" fill="#8b949e" text-anchor="start" font-weight="bold">max</text>
+<text x="926" y="368" font-size="62" fill="#e6edf3" text-anchor="start" font-weight="bold">20</text>
+<text x="1018" y="368" font-size="20" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<line x1="96" y1="424" x2="96" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="232" y1="424" x2="232" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="368" y1="424" x2="368" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="504" y1="424" x2="504" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="640" y1="424" x2="640" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="776" y1="424" x2="776" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="912" y1="424" x2="912" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="1048" y1="424" x2="1048" y2="520" stroke="#21262d" stroke-width="1"/>
+<line x1="1184" y1="424" x2="1184" y2="520" stroke="#21262d" stroke-width="1"/>
+<path d="M96.00 450.00L96.00 430.00 L109.60 430.00 L109.60 450.00 L123.20 450.00L123.20 430.00 L136.80 430.00 L136.80 450.00 L150.40 450.00L150.40 430.00 L164.00 430.00 L164.00 450.00 L177.60 450.00L177.60 430.00 L191.20 430.00 L191.20 450.00 L204.80 450.00L204.80 430.00 L218.40 430.00 L218.40 450.00 L232.00 450.00L232.00 430.00 L245.60 430.00 L245.60 450.00 L259.20 450.00L259.20 430.00 L272.80 430.00 L272.80 450.00 L286.40 450.00L286.40 430.00 L300.00 430.00 L300.00 450.00 L313.60 450.00L313.60 430.00 L327.20 430.00 L327.20 450.00 L340.80 450.00L340.80 430.00 L354.40 430.00 L354.40 450.00 L368.00 450.00L368.00 430.00 L381.60 430.00 L381.60 450.00 L395.20 450.00L395.20 430.00 L408.80 430.00 L408.80 450.00 L422.40 450.00L422.40 430.00 L436.00 430.00 L436.00 450.00 L449.60 450.00L449.60 430.00 L463.20 430.00 L463.20 450.00 L476.80 450.00L476.80 430.00 L490.40 430.00 L490.40 450.00 L504.00 450.00L504.00 430.00 L517.60 430.00 L517.60 450.00 L531.20 450.00L531.20 430.00 L544.80 430.00 L544.80 450.00 L558.40 450.00L558.40 430.00 L572.00 430.00 L572.00 450.00 L585.60 450.00L585.60 430.00 L599.20 430.00 L599.20 450.00 L612.80 450.00L612.80 430.00 L626.40 430.00 L626.40 450.00 L640.00 450.00L640.00 430.00 L653.60 430.00 L653.60 450.00 L667.20 450.00L667.20 430.00 L680.80 430.00 L680.80 450.00 L694.40 450.00L694.40 430.00 L708.00 430.00 L708.00 450.00 L721.60 450.00L721.60 430.00 L735.20 430.00 L735.20 450.00 L748.80 450.00L748.80 430.00 L762.40 430.00 L762.40 450.00 L776.00 450.00L776.00 430.00 L789.60 430.00 L789.60 450.00 L803.20 450.00L803.20 430.00 L816.80 430.00 L816.80 450.00 L830.40 450.00L830.40 430.00 L844.00 430.00 L844.00 450.00 L857.60 450.00L857.60 430.00 L871.20 430.00 L871.20 450.00 L884.80 450.00L884.80 430.00 L898.40 430.00 L898.40 450.00 L912.00 450.00L912.00 430.00 L925.60 430.00 L925.60 450.00 L939.20 450.00L939.20 430.00 L952.80 430.00 L952.80 450.00 L966.40 450.00L966.40 430.00 L980.00 430.00 L980.00 450.00 L993.60 450.00L993.60 430.00 L1007.20 430.00 L1007.20 450.00 L1020.80 450.00L1020.80 430.00 L1034.40 430.00 L1034.40 450.00 L1048.00 450.00L1048.00 430.00 L1061.60 430.00 L1061.60 450.00 L1075.20 450.00L1075.20 430.00 L1088.80 430.00 L1088.80 450.00 L1102.40 450.00L1102.40 430.00 L1116.00 430.00 L1116.00 450.00 L1129.60 450.00L1129.60 430.00 L1143.20 430.00 L1143.20 450.00 L1156.80 450.00L1156.80 430.00 L1170.40 430.00 L1170.40 450.00 L1184.00 450.00" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-linejoin="miter"/>
+<path d="M96.00 462.00L123.20 462.00L123.20 462.00 L123.20 462.00L150.40 462.00L150.40 462.00 L150.40 462.00L177.60 462.00L177.60 462.00 L177.60 462.00L204.80 462.00L204.80 462.00 L204.80 482.00L232.00 482.00L232.00 482.00 L232.00 462.00L259.20 462.00L259.20 462.00 L259.20 462.00L286.40 462.00L286.40 462.00 L286.40 462.00L313.60 462.00L313.60 462.00 L313.60 462.00L340.80 462.00L340.80 462.00 L340.80 462.00L368.00 462.00L368.00 462.00 L368.00 482.00L395.20 482.00L395.20 482.00 L395.20 482.00L422.40 482.00L422.40 482.00 L422.40 482.00L449.60 482.00L449.60 482.00 L449.60 482.00L476.80 482.00L476.80 482.00 L476.80 482.00L504.00 482.00L504.00 482.00 L504.00 482.00L531.20 482.00L531.20 482.00 L531.20 482.00L558.40 482.00L558.40 482.00 L558.40 482.00L585.60 482.00L585.60 482.00 L585.60 482.00L612.80 482.00L612.80 482.00 L612.80 482.00L640.00 482.00L640.00 482.00 L640.00 482.00L667.20 482.00L667.20 482.00 L667.20 482.00L694.40 482.00L694.40 482.00 L694.40 482.00L721.60 482.00L721.60 482.00 L721.60 482.00L748.80 482.00L748.80 482.00 L748.80 462.00L776.00 462.00L776.00 462.00 L776.00 462.00L803.20 462.00L803.20 462.00 L803.20 462.00L830.40 462.00L830.40 462.00 L830.40 462.00L857.60 462.00L857.60 462.00 L857.60 462.00L884.80 462.00L884.80 462.00 L884.80 482.00L912.00 482.00L912.00 482.00 L912.00 482.00L939.20 482.00L939.20 482.00 L939.20 482.00L966.40 482.00L966.40 482.00 L966.40 482.00L993.60 482.00L993.60 482.00 L993.60 482.00L1020.80 482.00L1020.80 482.00 L1020.80 462.00L1048.00 462.00L1048.00 462.00 L1048.00 462.00L1075.20 462.00L1075.20 462.00 L1075.20 462.00L1102.40 462.00L1102.40 462.00 L1102.40 462.00L1129.60 462.00L1129.60 462.00 L1129.60 462.00L1156.80 462.00L1156.80 462.00 L1156.80 482.00L1184.00 482.00" fill="none" stroke="#3fb950" stroke-width="2" stroke-linejoin="miter"/>
+<path d="M96.00 504.00L123.20 504.00L123.20 504.00L150.40 504.00L150.40 504.00L177.60 504.00L177.60 504.00L204.80 504.00L204.80 504.00L232.00 504.00L232.00 504.00L259.20 504.00L259.20 504.00L286.40 504.00L286.40 504.00L313.60 504.00L313.60 504.00L340.80 504.00L340.80 504.00L368.00 504.00L368.00 504.00L395.20 504.00L395.20 504.00L422.40 504.00L422.40 498.00L449.60 498.00L449.60 498.00L476.80 498.00L476.80 498.00L504.00 498.00L504.00 498.00L531.20 498.00L531.20 498.00L558.40 498.00L558.40 498.00L585.60 498.00L585.60 508.00L612.80 508.00L612.80 508.00L640.00 508.00L640.00 508.00L667.20 508.00L667.20 508.00L694.40 508.00L694.40 508.00L721.60 508.00L721.60 508.00L748.80 508.00L748.80 508.00L776.00 508.00L776.00 508.00L803.20 508.00L803.20 508.00L830.40 508.00L830.40 508.00L857.60 508.00L857.60 508.00L884.80 508.00L884.80 508.00L912.00 508.00L912.00 508.00L939.20 508.00L939.20 508.00L966.40 508.00L966.40 508.00L993.60 508.00L993.60 508.00L1020.80 508.00L1020.80 508.00L1048.00 508.00L1048.00 508.00L1075.20 508.00L1075.20 508.00L1102.40 508.00L1102.40 502.00L1129.60 502.00L1129.60 502.00L1156.80 502.00L1156.80 502.00L1184.00 502.00" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linejoin="miter"/>
+<text x="96" y="556" font-size="16" fill="#e3b341" text-anchor="start" font-weight="normal">simulated cycles, synthetic input, not a hardware measurement | 256 messages | real VCD trace above</text>
+</svg>

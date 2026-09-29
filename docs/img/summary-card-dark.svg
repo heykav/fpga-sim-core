@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="t d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<title id="t">Simulation summary card</title>
+<desc id="d">Summary of the demo run in simulated cycles: min 14, median 15, p99 19, max 20.</desc>
+<rect x="0" y="0" width="1280" height="420" fill="#0d1117"/>
+<text x="48" y="60" font-size="26" fill="#e6edf3" text-anchor="start" font-weight="bold">fpga-sim-core  demo run</text>
+<text x="48" y="88" font-size="16" fill="#e3b341" text-anchor="start" font-weight="normal">simulated cycles, synthetic input, not a hardware measurement</text>
+<rect x="48" y="118" width="280" height="150" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="70" y="154" font-size="15" fill="#8b949e" text-anchor="start" font-weight="bold">MIN</text>
+<text x="70" y="214" font-size="60" fill="#e6edf3" text-anchor="start" font-weight="bold">14</text>
+<text x="158" y="214" font-size="18" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<text x="70" y="246" font-size="16" fill="#8b949e" text-anchor="start" font-weight="normal">= 43.4424 ns</text>
+<rect x="352" y="118" width="280" height="150" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="374" y="154" font-size="15" fill="#8b949e" text-anchor="start" font-weight="bold">MEDIAN</text>
+<text x="374" y="214" font-size="60" fill="#3fb950" text-anchor="start" font-weight="bold">15</text>
+<text x="462" y="214" font-size="18" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<text x="374" y="246" font-size="16" fill="#8b949e" text-anchor="start" font-weight="normal">= 46.5455 ns</text>
+<rect x="656" y="118" width="280" height="150" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="678" y="154" font-size="15" fill="#8b949e" text-anchor="start" font-weight="bold">P99</text>
+<text x="678" y="214" font-size="60" fill="#e3b341" text-anchor="start" font-weight="bold">19</text>
+<text x="766" y="214" font-size="18" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<text x="678" y="246" font-size="16" fill="#8b949e" text-anchor="start" font-weight="normal">= 58.9576 ns</text>
+<rect x="960" y="118" width="280" height="150" fill="#161b22" rx="10" stroke="#30363d" stroke-width="1"/>
+<text x="982" y="154" font-size="15" fill="#8b949e" text-anchor="start" font-weight="bold">MAX</text>
+<text x="982" y="214" font-size="60" fill="#e6edf3" text-anchor="start" font-weight="bold">20</text>
+<text x="1070" y="214" font-size="18" fill="#8b949e" text-anchor="start" font-weight="normal">cycles</text>
+<text x="982" y="246" font-size="16" fill="#8b949e" text-anchor="start" font-weight="normal">= 62.0606 ns</text>
+<text x="48" y="316" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="normal">256 messages (A=116 E=100 X=40), 5339 cycles simulated, 256 decision records posted</text>
+<text x="48" y="344" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="normal">clock 322.265625 MHz = 512/165 ns/cycle  |  cumulative OFI 400, nonzero on 112 of 256 messages  |  book adds dropped: 0</text>
+<text x="48" y="388" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">Latency = cycles from first PCS block arrival to DMA decision-record post; stage latencies are documented model parameters.</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<title id="t">Tick-to-trade latency histogram</title>
+<desc id="d">Histogram of per-message latency in simulated cycles for 256 synthetic ITCH messages: min 14, median 15, p99 19, max 20.</desc>
+<rect x="0" y="0" width="1280" height="640" fill="#0d1117"/>
+<text x="64" y="64" font-size="26" fill="#e6edf3" text-anchor="start" font-weight="bold">Tick-to-trade latency, 256 synthetic ITCH messages</text>
+<text x="64" y="94" font-size="16" fill="#e3b341" text-anchor="start" font-weight="normal">simulated cycles, synthetic input, not a hardware measurement</text>
+<line x1="120" y1="500" x2="1216" y2="500" stroke="#21262d" stroke-width="1"/>
+<text x="108" y="505" font-size="14" fill="#8b949e" text-anchor="end" font-weight="normal">0</text>
+<line x1="120" y1="383.333" x2="1216" y2="383.333" stroke="#21262d" stroke-width="1"/>
+<text x="108" y="388.333" font-size="14" fill="#8b949e" text-anchor="end" font-weight="normal">50</text>
+<line x1="120" y1="266.667" x2="1216" y2="266.667" stroke="#21262d" stroke-width="1"/>
+<text x="108" y="271.667" font-size="14" fill="#8b949e" text-anchor="end" font-weight="normal">100</text>
+<line x1="120" y1="150" x2="1216" y2="150" stroke="#21262d" stroke-width="1"/>
+<text x="108" y="155" font-size="14" fill="#8b949e" text-anchor="end" font-weight="normal">150</text>
+<text x="120" y="132" font-size="14" fill="#8b949e" text-anchor="start" font-weight="normal">messages per 2-cycle bin</text>
+<rect x="182" y="196.667" width="150" height="303.333" fill="#58a6ff" rx="3"/>
+<text x="257" y="186.667" font-size="18" fill="#e6edf3" text-anchor="middle" font-weight="bold">130</text>
+<text x="257" y="530" font-size="16" fill="#e6edf3" text-anchor="middle" font-weight="normal">14-15</text>
+<rect x="456" y="217.667" width="150" height="282.333" fill="#58a6ff" rx="3"/>
+<text x="531" y="207.667" font-size="18" fill="#e6edf3" text-anchor="middle" font-weight="bold">121</text>
+<text x="531" y="530" font-size="16" fill="#e6edf3" text-anchor="middle" font-weight="normal">16-17</text>
+<rect x="730" y="490.667" width="150" height="9.33333" fill="#58a6ff" rx="3"/>
+<text x="805" y="480.667" font-size="18" fill="#e6edf3" text-anchor="middle" font-weight="bold">4</text>
+<text x="805" y="530" font-size="16" fill="#e6edf3" text-anchor="middle" font-weight="normal">18-19</text>
+<rect x="1004" y="497.667" width="150" height="2.33333" fill="#58a6ff" rx="3"/>
+<text x="1079" y="487.667" font-size="18" fill="#e6edf3" text-anchor="middle" font-weight="bold">1</text>
+<text x="1079" y="530" font-size="16" fill="#e6edf3" text-anchor="middle" font-weight="normal">20-21</text>
+<text x="668" y="564" font-size="15" fill="#8b949e" text-anchor="middle" font-weight="normal">latency (simulated cycles, 1 cycle = 512/165 ns)</text>
+<line x1="288.25" y1="494" x2="288.25" y2="180" stroke="#3fb950" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="296.25" y="194" font-size="15" fill="#3fb950" text-anchor="start" font-weight="bold">median = 15 cycles</text>
+<line x1="836.25" y1="494" x2="836.25" y2="208" stroke="#e3b341" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="844.25" y="222" font-size="15" fill="#e3b341" text-anchor="start" font-weight="bold">p99 = 19 cycles</text>
+<text x="64" y="590" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="normal">min 14  |  median 15  |  p99 19  |  max 20 cycles   (43.4424 / 46.5455 / 58.9576 / 62.0606 ns)</text>
+<text x="64" y="616" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">source: ./fpga-sim-demo, PRNG seed 0x5EEDF00D, 5339 cycles simulated</text>
+</svg>
