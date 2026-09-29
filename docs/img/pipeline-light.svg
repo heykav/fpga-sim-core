@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="490" viewBox="0 0 1280 490" role="img" aria-labelledby="t d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<title id="t">Tick-to-trade pipeline stages</title>
+<desc id="d">Pipeline: PCS block decode, MAC framer, ITCH parser 2 cycles, order book 1 cycle, quote RAM 1, OFI 3 stages, DMA post 2 cycles.</desc>
+<rect x="0" y="0" width="1280" height="490" fill="#ffffff"/>
+<text x="48" y="54" font-size="24" fill="#1f2328" text-anchor="start" font-weight="bold">Tick-to-trade pipeline (include/pipeline/tick_to_trade.hpp)</text>
+<text x="48" y="80" font-size="15" fill="#57606a" text-anchor="start" font-weight="normal">latency is counted in simulated cycles; every stage hand-off is a one-cycle register</text>
+<rect x="48" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#1a7f37" stroke-width="2"/>
+<text x="120" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">PCS</text>
+<text x="120" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">Deserializer66b</text>
+<line x1="62" y1="204" x2="178" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="120" y="242" font-size="16" fill="#1a7f37" text-anchor="middle" font-weight="bold">1 block/cycle</text>
+<text x="120" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">4-6 blocks/msg</text>
+<line x1="196" y1="225" x2="214" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M218 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="220" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#1a7f37" stroke-width="2"/>
+<text x="292" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">MAC</text>
+<text x="292" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">MacFramer</text>
+<line x1="234" y1="204" x2="350" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="292" y="242" font-size="16" fill="#1a7f37" text-anchor="middle" font-weight="bold">1 beat/cycle</text>
+<text x="292" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">1 beat/msg</text>
+<line x1="368" y1="225" x2="386" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M390 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="392" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#9a6700" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="464" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">PARSE</text>
+<text x="464" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">Itch50Parser</text>
+<line x1="406" y1="204" x2="522" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="464" y="242" font-size="16" fill="#9a6700" text-anchor="middle" font-weight="bold">2 cycles</text>
+<text x="464" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">fixed parameter</text>
+<line x1="540" y1="225" x2="558" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M562 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="564" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#9a6700" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="636" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">BOOK</text>
+<text x="636" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">FiveLevelOrderBook</text>
+<line x1="578" y1="204" x2="694" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="636" y="242" font-size="16" fill="#9a6700" text-anchor="middle" font-weight="bold">1 cycle</text>
+<text x="636" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">fixed parameter</text>
+<line x1="712" y1="225" x2="730" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M734 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="736" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#1a7f37" stroke-width="2"/>
+<text x="808" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">QUOTE RAM</text>
+<text x="808" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">DualPortBram</text>
+<line x1="750" y1="204" x2="866" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="808" y="242" font-size="16" fill="#1a7f37" text-anchor="middle" font-weight="bold">latency 1</text>
+<text x="808" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">write + read-back</text>
+<line x1="884" y1="225" x2="902" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M906 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="908" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#1a7f37" stroke-width="2"/>
+<text x="980" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">OFI</text>
+<text x="980" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">OfiDsp</text>
+<line x1="922" y1="204" x2="1038" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="980" y="242" font-size="16" fill="#1a7f37" text-anchor="middle" font-weight="bold">3 stages</text>
+<text x="980" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">as executed</text>
+<line x1="1056" y1="225" x2="1074" y2="225" stroke="#57606a" stroke-width="2"/>
+<path d="M1078 225 l-7 -5 v10 z" fill="#57606a" stroke="#57606a" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="1080" y="130" width="144" height="190" fill="#f6f8fa" rx="8" stroke="#9a6700" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1152" y="164" font-size="17" fill="#1f2328" text-anchor="middle" font-weight="bold">DMA</text>
+<text x="1152" y="188" font-size="11" fill="#57606a" text-anchor="middle" font-weight="normal">PcieGen4x16Dma</text>
+<line x1="1094" y1="204" x2="1210" y2="204" stroke="#d0d7de" stroke-width="1"/>
+<text x="1152" y="242" font-size="16" fill="#9a6700" text-anchor="middle" font-weight="bold">2 cycles</text>
+<text x="1152" y="270" font-size="12" fill="#1f2328" text-anchor="middle" font-weight="normal">fixed parameter</text>
+<text x="48" y="114" font-size="14" fill="#57606a" text-anchor="start" font-weight="normal">wire</text>
+<text x="1224" y="114" font-size="14" fill="#57606a" text-anchor="end" font-weight="normal">decision record posted to host ring</text>
+<rect x="48" y="372" width="22" height="14" fill="none" rx="3" stroke="#1a7f37" stroke-width="2"/>
+<text x="80" y="384" font-size="14" fill="#1f2328" text-anchor="start" font-weight="normal">derived from data or from the module as it executes</text>
+<rect x="568" y="372" width="22" height="14" fill="none" rx="3" stroke="#9a6700" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="600" y="384" font-size="14" fill="#1f2328" text-anchor="start" font-weight="normal">fixed documented model parameter (module has no timing of its own)</text>
+<text x="48" y="414" font-size="13" fill="#57606a" text-anchor="start" font-weight="normal">Latency = inclusive cycles from a message&#x27;s first PCS block arriving to its decision record being posted (queueing behind earlier messages included).</text>
+<text x="48" y="438" font-size="13" fill="#57606a" text-anchor="start" font-weight="normal">Parameter values are read from the source by scripts/make_figures.py. &quot;Trade&quot; means the record post; no order is sent.</text>
+<text x="48" y="462" font-size="13" fill="#9a6700" text-anchor="start" font-weight="normal">simulated cycles, synthetic input, not a hardware measurement</text>
+</svg>
