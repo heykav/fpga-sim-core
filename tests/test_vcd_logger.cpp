@@ -33,7 +33,7 @@ int main() {
     std::vector<std::string> ofi;
     bool saw_timescale = false;
     while (std::getline(in, line)) {
-        if (line.rfind("$timescale 100 fs", 0) == 0) saw_timescale = true;
+        if (line.rfind("$timescale 1 fs", 0) == 0) saw_timescale = true;
         if (line == "$enddefinitions $end") { header_done = true; continue; }
         if (!header_done) continue;
         if (line == "$dumpvars") { in_dumpvars = true; continue; }
@@ -56,12 +56,12 @@ int main() {
     assert(saw_timescale && header_done);
     // 4 cycles -> 8 distinct timestamps (rise + fall each), starting at #0.
     assert(times.size() == 8 && times.front() == 0);
-    // Cycle N rises at N * 3.1032 ns = N * 31032 units of 100 fs; falls half a cycle later.
+    // Cycle N rises at N * 3103030 fs (1/322.265625 MHz = 3.10303.. ns, rounded to whole fs); falls half a cycle later.
     for (std::uint64_t c = 0; c < 4; ++c) {
-        assert(times[2 * c] == c * 31032);
-        assert(times[2 * c + 1] == c * 31032 + 15516);
+        assert(times[2 * c] == c * 3103030);
+        assert(times[2 * c + 1] == c * 3103030 + 1551515);
     }
-    static_assert(fpga_sim::VcdLogger::units_per_cycle == 31032);
+    static_assert(fpga_sim::VcdLogger::units_per_cycle == 3103030);
     // Clock actually toggles.
     assert(clk.size() == 8);
     for (std::size_t i = 0; i < clk.size(); ++i) assert(clk[i] == (i % 2 == 0 ? '1' : '0'));

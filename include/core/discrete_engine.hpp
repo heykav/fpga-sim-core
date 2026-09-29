@@ -8,7 +8,20 @@ namespace fpga_sim {
 
 class DiscreteEngine {
 public:
-    static constexpr double cycle_ns = 3.1032;
+    // Single source of truth for the modelled clock: 322.265625 MHz.
+    static constexpr std::uint64_t clock_hz = 322265625ULL;
+    // Period as an exact fraction: 1e9 / clock_hz ns = 512/165 ns = 3.10303... ns.
+    static constexpr std::uint64_t cycle_ns_num = 512;
+    static constexpr std::uint64_t cycle_ns_den = 165;
+    static_assert(clock_hz * cycle_ns_num == 1000000000ULL * cycle_ns_den,
+                  "cycle period fraction must equal 1/clock_hz");
+    static constexpr double cycle_ns = 1.0e9 / static_cast<double>(clock_hz);
+
+    // Cycles -> nanoseconds x 10^4 (four decimals), rounded half up, integer-only
+    // so reports are bit-identical on every platform.
+    [[nodiscard]] static constexpr std::uint64_t cycles_to_ns_e4(std::uint64_t cycles) noexcept {
+        return (cycles * cycle_ns_num * 10000ULL + cycle_ns_den / 2) / cycle_ns_den;
+    }
     using Callback = void (*)(void*, std::uint64_t) noexcept;
 
     static constexpr std::size_t max_callbacks = 16;
