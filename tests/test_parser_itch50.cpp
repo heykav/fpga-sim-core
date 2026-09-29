@@ -2,6 +2,9 @@
 // against the real NASDAQ TotalView-ITCH 5.0 byte layout: Add Order (No
 // MPID) = 36 bytes, Order Executed = 31 bytes, Order Cancel = 23 bytes,
 // all with Order Reference Number at offset 11.
+#ifdef NDEBUG
+#undef NDEBUG  // these tests rely on assert(); never compile them out
+#endif
 #include <cassert>
 #include <cstdio>
 #include <cstring>

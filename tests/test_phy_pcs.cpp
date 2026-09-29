@@ -1,6 +1,9 @@
 // Unit tests for Crc32 and Deserializer66b (include/modules/phy_pcs.hpp).
 // Plain assert()-based, no external framework, matching the project's own
 // zero-extra-dependency ethos.
+#ifdef NDEBUG
+#undef NDEBUG  // these tests rely on assert(); never compile them out
+#endif
 #include <cassert>
 #include <cstdio>
 #include <cstring>
