@@ -23,7 +23,7 @@ add_executable(test-parser-itch50 tests/test_parser_itch50.cpp)
 target_link_libraries(test-parser-itch50 PRIVATE fpga-sim-core)
 add_test(NAME test-parser-itch50 COMMAND test-parser-itch50)
 
-foreach(t discrete-engine order-book vcd-logger hot-path-alloc)
+foreach(t discrete-engine order-book vcd-logger hot-path-alloc ofi pipeline-golden)
   string(REPLACE "-" "_" src ${t})
   add_executable(test-${t} tests/test_${src}.cpp)
   target_link_libraries(test-${t} PRIVATE fpga-sim-core)

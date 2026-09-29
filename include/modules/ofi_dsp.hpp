@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstddef>
 #include <limits>
 
 namespace fpga_sim {
@@ -38,8 +39,18 @@ struct BookQuote {
     std::int32_t ask_qty = 0;
 };
 
+// Order-flow imbalance following Cont, Kukanov & Stoikov (2014), per best-quote
+// update n (integer arithmetic only):
+//   e_n = [Pb>=Pb'] qb - [Pb<=Pb'] qb' - [Pa<=Pa'] qa + [Pa>=Pa'] qa'
+// where primes are the previous quote. The output is e_n saturated to int32;
+// summing the outputs over a stream gives the cumulative OFI.
+//
+// Timing (modelled, derived from the code below): posedge() in cycle t loads
+// pipeline stage 0; negedge() in cycle t+2 exposes it, i.e. 3 stages.
 class OfiDsp {
 public:
+    static constexpr std::size_t pipeline_stages = 3;
+
     void reset() noexcept {
         previous_ = {};
         valid_previous_ = false;
@@ -50,11 +61,18 @@ public:
     void posedge(const BookQuote& quote) noexcept {
         const std::int64_t eb = side_bid(quote);
         const std::int64_t ea = side_ask(quote);
-        const std::int64_t value = eb - ea;
+        const std::int64_t value = eb + ea;
         for (std::size_t i = pipeline_.size() - 1; i > 0; --i) pipeline_[i] = pipeline_[i - 1];
         pipeline_[0] = {true, saturate(value)};
         previous_ = quote;
         valid_previous_ = true;
+    }
+
+    // A cycle with no new quote: the pipeline advances, an invalid (bubble)
+    // stage enters, and the previous-quote state is untouched.
+    void posedge_idle() noexcept {
+        for (std::size_t i = pipeline_.size() - 1; i > 0; --i) pipeline_[i] = pipeline_[i - 1];
+        pipeline_[0] = {};
     }
 
     void negedge() noexcept {
@@ -71,9 +89,10 @@ private:
         if (q.bid_price == previous_.bid_price) return static_cast<std::int64_t>(q.bid_qty) - previous_.bid_qty;
         return -static_cast<std::int64_t>(previous_.bid_qty);
     }
+    // Signed ask-side contribution to e_n (already carries its sign).
     std::int64_t side_ask(const BookQuote& q) const noexcept {
         if (!valid_previous_ || q.ask_price < previous_.ask_price) return -static_cast<std::int64_t>(q.ask_qty);
-        if (q.ask_price == previous_.ask_price) return static_cast<std::int64_t>(q.ask_qty) - previous_.ask_qty;
+        if (q.ask_price == previous_.ask_price) return static_cast<std::int64_t>(previous_.ask_qty) - q.ask_qty;
         return previous_.ask_qty;
     }
     static std::int32_t saturate(std::int64_t value) noexcept {
@@ -83,7 +102,7 @@ private:
     }
     BookQuote previous_{};
     bool valid_previous_ = false;
-    std::array<Stage, 3> pipeline_{};
+    std::array<Stage, pipeline_stages> pipeline_{};
     Stage output_{};
 };
 

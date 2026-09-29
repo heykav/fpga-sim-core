@@ -1,21 +1,27 @@
 #pragma once
 
+#include "core/discrete_engine.hpp"
+
 #include <cstdint>
 #include <cstdio>
 
 namespace fpga_sim {
 
-// Minimal VCD writer. Time unit is 100 fs so one 3.1032 ns cycle is exactly
-// 31032 units (no rounding drift). Each cycle() call emits a rising clock edge
+// Minimal VCD writer. Time unit is 1 fs. One cycle (1/322.265625 MHz =
+// 3.1030303... ns) is not an integer number of femtoseconds, so it is rounded
+// to 3103030 fs (error about 0.3 fs per cycle, 1e-7 relative, accumulating
+// linearly in the trace timestamps only). Each cycle() call emits a rising clock edge
 // at the start of the cycle and a falling edge half a cycle later.
 class VcdLogger {
 public:
-    static constexpr std::uint64_t units_per_cycle = 31032;  // 3.1032 ns / 100 fs
+    static constexpr std::uint64_t units_per_cycle =
+        (DiscreteEngine::cycle_ns_num * 1000000ULL + DiscreteEngine::cycle_ns_den / 2) /
+        DiscreteEngine::cycle_ns_den;  // ns -> fs, rounded to nearest
     static constexpr std::uint64_t units_per_half_cycle = units_per_cycle / 2;
 
     explicit VcdLogger(const char* path) : file_(std::fopen(path, "w")) {
         if (file_ != nullptr) {
-            std::fprintf(file_, "$timescale 100 fs $end\n$scope module fpga_sim $end\n");
+            std::fprintf(file_, "$timescale 1 fs $end\n$scope module fpga_sim $end\n");
             std::fprintf(file_, "$var wire 1 ! clk $end\n$var wire 1 \" tick_valid $end\n");
             std::fprintf(file_, "$var wire 32 # ofi $end\n$upscope $end\n$enddefinitions $end\n");
             std::fprintf(file_, "#0\n$dumpvars\n0!\n0\"\nb0 #\n$end\n");

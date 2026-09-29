@@ -53,6 +53,21 @@ public:
         }
     }
 
+    // Highest-priced valid bid / lowest-priced valid ask; the returned level has
+    // valid == false when that side is empty. Levels are stored unsorted.
+    [[nodiscard]] BookLevel best_bid() const noexcept {
+        BookLevel best{};
+        for (const auto& level : bids_)
+            if (level.valid && (!best.valid || level.price > best.price)) best = level;
+        return best;
+    }
+    [[nodiscard]] BookLevel best_ask() const noexcept {
+        BookLevel best{};
+        for (const auto& level : asks_)
+            if (level.valid && (!best.valid || level.price < best.price)) best = level;
+        return best;
+    }
+
     [[nodiscard]] const BookLevel& bid(std::size_t level) const noexcept { return bids_[level]; }
     [[nodiscard]] const BookLevel& ask(std::size_t level) const noexcept { return asks_[level]; }
     [[nodiscard]] bool collision() const noexcept { return collision_; }
