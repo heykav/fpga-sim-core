@@ -124,6 +124,40 @@ void rejects_an_unknown_message_type_without_crashing() {
     assert(parser.parse(buf.data(), buf.size()) == 0);
 }
 
+void reports_why_parsing_stopped() {
+    Itch50Parser parser;
+    auto add = make_add_order(1, 'B', 10, "AMZN", 100);
+    parser.parse(add.data(), add.size());
+    assert(parser.status() == fpga_sim::ParseStatus::ok);
+    assert(parser.bytes_consumed() == add.size());
+
+    // Valid add followed by an unknown type: the add is kept, the stop is visible.
+    auto buf = add;
+    buf.push_back('Z');
+    buf.resize(buf.size() + 9, 0);
+    assert(parser.parse(buf.data(), buf.size()) == 1);
+    assert(parser.status() == fpga_sim::ParseStatus::unknown_type);
+    assert(parser.bytes_consumed() == add.size());
+    assert(parser.bytes_consumed() < parser.byte_count());
+
+    // Truncated trailing message.
+    auto trunc = add;
+    trunc.insert(trunc.end(), add.begin(), add.begin() + 10);
+    assert(parser.parse(trunc.data(), trunc.size()) == 1);
+    assert(parser.status() == fpga_sim::ParseStatus::truncated);
+    assert(parser.bytes_consumed() == add.size());
+
+    // More messages than max_events.
+    std::vector<std::uint8_t> many;
+    for (std::size_t i = 0; i < Itch50Parser::max_events + 1; ++i) many.insert(many.end(), add.begin(), add.end());
+    assert(parser.parse(many.data(), many.size()) == Itch50Parser::max_events);
+    assert(parser.status() == fpga_sim::ParseStatus::event_limit);
+    assert(parser.bytes_consumed() == add.size() * Itch50Parser::max_events);
+
+    parser.reset();
+    assert(parser.status() == fpga_sim::ParseStatus::ok);
+}
+
 void handles_a_zero_length_buffer() {
     Itch50Parser parser;
     assert(parser.parse(nullptr, 0) == 0);
@@ -149,6 +183,7 @@ int main() {
     parses_multiple_concatenated_messages_in_one_buffer();
     stops_cleanly_on_a_truncated_trailing_message();
     rejects_an_unknown_message_type_without_crashing();
+    reports_why_parsing_stopped();
     handles_a_zero_length_buffer();
     reset_clears_prior_state();
     std::puts("test_parser_itch50: all assertions passed");

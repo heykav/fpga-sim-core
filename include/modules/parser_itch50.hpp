@@ -17,6 +17,14 @@ struct ItchEvent {
     std::array<char, 9> stock{};
 };
 
+// Why the last parse() call stopped.
+enum class ParseStatus : std::uint8_t {
+    ok,            // whole buffer consumed
+    unknown_type,  // stopped at a message type this parser has no verified length for
+    truncated,     // stopped at a known type whose message runs past the buffer end
+    event_limit    // stopped because max_events events were already stored
+};
+
 class Itch50Parser {
 public:
     static constexpr std::size_t max_events = 32;
@@ -24,25 +32,34 @@ public:
     void reset() noexcept {
         event_count_ = 0;
         byte_count_ = 0;
+        consumed_ = 0;
+        status_ = ParseStatus::ok;
     }
 
     std::size_t parse(const std::uint8_t* bytes, std::size_t length) noexcept {
         event_count_ = 0;
         byte_count_ = length;
+        status_ = ParseStatus::ok;
         std::size_t offset = 0;
-        while (offset < length && event_count_ < max_events) {
+        while (offset < length) {
+            if (event_count_ >= max_events) { status_ = ParseStatus::event_limit; break; }
             const std::size_t message_length = length_for(bytes[offset]);
-            if (message_length == 0 || length - offset < message_length) break;
+            if (message_length == 0) { status_ = ParseStatus::unknown_type; break; }
+            if (length - offset < message_length) { status_ = ParseStatus::truncated; break; }
             ItchEvent event{};
             if (decode(bytes + offset, message_length, event)) events_[event_count_++] = event;
             offset += message_length;
         }
+        consumed_ = offset;
         return event_count_;
     }
 
     [[nodiscard]] const ItchEvent& event(std::size_t index) const noexcept { return events_[index]; }
     [[nodiscard]] std::size_t event_count() const noexcept { return event_count_; }
     [[nodiscard]] std::size_t byte_count() const noexcept { return byte_count_; }
+    // Bytes of the last buffer actually consumed; less than byte_count() when status() != ok.
+    [[nodiscard]] std::size_t bytes_consumed() const noexcept { return consumed_; }
+    [[nodiscard]] ParseStatus status() const noexcept { return status_; }
 
 private:
     static std::uint64_t u64be(const std::uint8_t* p) noexcept {
@@ -91,6 +108,8 @@ private:
     std::array<ItchEvent, max_events> events_{};
     std::size_t event_count_ = 0;
     std::size_t byte_count_ = 0;
+    std::size_t consumed_ = 0;
+    ParseStatus status_ = ParseStatus::ok;
 };
 
 } // namespace fpga_sim

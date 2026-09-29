@@ -27,6 +27,12 @@ void put_u64(std::uint8_t* p, std::uint64_t value) {
     for (int i = 7; i >= 0; --i) { p[i] = static_cast<std::uint8_t>(value); value >>= 8U; }
 }
 
+// Scripted stimulus timeline. These cycles are chosen by this demo; they are
+// NOT measured pipeline latencies of the modelled hardware.
+constexpr std::uint64_t kScriptedTickCycle = 13;
+constexpr std::uint64_t kScriptedBookCycle = 23;
+constexpr std::uint64_t kScriptedTradeCycle = 68;
+
 struct Simulation {
     Itch50Parser parser{};
     DualPortBram<BookQuote, 32, 1> book{};
@@ -34,14 +40,15 @@ struct Simulation {
     OfiDsp ofi{};
     VcdLogger vcd;
     std::array<Axi4Stream512, 2>& stream;
-    std::array<std::uint64_t, 69>& histogram;
     std::int32_t& last_ofi;
     bool tick_seen = false;
     bool trade_seen = false;
+    std::uint64_t tick_cycle = 0;   // engine cycle counter when the tick was observed
+    std::uint64_t trade_cycle = 0;  // engine cycle counter when the trade was applied
 
     Simulation(const char* vcd_path, std::array<Axi4Stream512, 2>& input,
-               std::array<std::uint64_t, 69>& latency, std::int32_t& output)
-        : vcd(vcd_path), stream(input), histogram(latency), last_ofi(output) {}
+               std::int32_t& output)
+        : vcd(vcd_path), stream(input), last_ofi(output) {}
 
     static void posedge_callback(void* context, std::uint64_t cycle) noexcept {
         static_cast<Simulation*>(context)->posedge(cycle);
@@ -50,12 +57,13 @@ struct Simulation {
         static_cast<Simulation*>(context)->negedge(cycle);
     }
     void posedge(std::uint64_t cycle) noexcept {
-        if (cycle == 13 && stream[0].transfer() && stream[1].transfer()) {
+        if (cycle == kScriptedTickCycle && stream[0].transfer() && stream[1].transfer()) {
             // The frame was parsed before stepping to keep the hot path fixed;
             // this branch models the registered MAC/parser handoff.
             tick_seen = parser.event_count() > 0;
+            if (tick_seen) tick_cycle = cycle;
         }
-        if (cycle == 23 && tick_seen) {
+        if (cycle == kScriptedBookCycle && tick_seen) {
             const auto& add = parser.event(0);
             levels.add(add.side == 'B', static_cast<std::int32_t>(add.price_ticks),
                        static_cast<std::int32_t>(add.shares));
@@ -72,11 +80,11 @@ struct Simulation {
         book.negedge();
         ofi.negedge();
         if (ofi.output_valid()) last_ofi = ofi.output();
-        if (cycle == 68 && parser.event_count() > 1 && parser.event(1).type == ItchType::executed) {
+        if (cycle == kScriptedTradeCycle && parser.event_count() > 1 && parser.event(1).type == ItchType::executed) {
             levels.execute(true, static_cast<std::int32_t>(parser.event(0).price_ticks),
                            static_cast<std::int32_t>(parser.event(1).shares));
             trade_seen = true;
-            histogram[cycle] = 1;
+            trade_cycle = cycle;
         }
         vcd.cycle(cycle, tick_seen, last_ofi);
     }
@@ -116,23 +124,24 @@ int main() {
     if (!dma.consume(consumed) || consumed.byte_count != itch.size()) return 1;
 
     DiscreteEngine engine;
-    std::array<std::uint64_t, 69> latency_histogram{};
     std::int32_t last_ofi = 0;
-    Simulation simulation("fpga_sim_core.vcd", stream, latency_histogram, last_ofi);
+    Simulation simulation("fpga_sim_core.vcd", stream, last_ofi);
     // The parser consumes the zero-copy frame at the registered MAC boundary.
     simulation.parser.parse(itch.data(), itch.size());
     simulation.tick_seen = simulation.parser.event_count() > 0;
-    engine.on_posedge(&Simulation::posedge_callback, &simulation);
-    engine.on_negedge(&Simulation::negedge_callback, &simulation);
+    if (!engine.on_posedge(&Simulation::posedge_callback, &simulation) ||
+        !engine.on_negedge(&Simulation::negedge_callback, &simulation)) return 1;
     engine.run(69);
 
     if (!simulation.trade_seen) return 1;
     std::cout << "fpga-sim-core: discrete clock = " << DiscreteEngine::cycle_ns << " ns/cycle\n";
     std::cout << "OFI (signed int32) = " << last_ofi << "\n";
-    std::cout << "tick-to-trade latency histogram (cycles -> count):\n";
-    for (std::size_t cycles = 0; cycles < latency_histogram.size(); ++cycles) {
-        if (latency_histogram[cycles] != 0) std::cout << "  " << cycles << " -> " << latency_histogram[cycles] << "\n";
-    }
+    const std::uint64_t scripted_delta = simulation.trade_cycle - simulation.tick_cycle;
+    std::cout << "scripted stimulus timeline (NOT a measured latency):\n";
+    std::cout << "  tick observed at cycle " << simulation.tick_cycle
+              << ", trade applied at cycle " << simulation.trade_cycle << "\n";
+    std::cout << "  scripted gap = " << scripted_delta << " cycles = "
+              << static_cast<double>(scripted_delta) * DiscreteEngine::cycle_ns << " ns\n";
     std::cout << "VCD trace: fpga_sim_core.vcd\n";
     return 0;
 }
