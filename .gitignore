@@ -1,4 +1,5 @@
 /build/
+/build-*/
 /fpga-sim-demo
 /fpga-sim-core
 /fpga_sim_core.vcd

@@ -1,0 +1,21 @@
+fpga-sim-core: discrete clock = 322.265625 MHz = 512/165 ns/cycle (3.10303)
+SYNTHETIC ITCH 5.0 stream (fixed-seed PRNG 0x5EEDF00D, not market data): 256 messages (A=116 E=100 X=40)
+simulated 5339 cycles; 256 decision records posted to the DMA ring
+tick-to-trade latency, simulated cycles (model with documented stage latencies; not a hardware measurement):
+  min       14 cycles = 43.4424 ns
+  median    15 cycles = 46.5455 ns
+  p99       19 cycles = 58.9576 ns
+  max       20 cycles = 62.0606 ns
+histogram (2-cycle bins, last bin includes overflow):
+   14- 15 cycles  130 ########################################
+   16- 17 cycles  121 ######################################
+   18- 19 cycles    4 ##
+   20- 21 cycles    1 #
+latency distribution, 1-cycle resolution (cycles=messages):
+  all 14=37 15=93 16=114 17=7 18=1 19=3 20=1
+  A   14=0 15=0 16=108 17=3 18=1 19=3 20=1
+  E   14=0 15=93 16=5 17=2 18=0 19=0 20=0
+  X   14=37 15=0 16=1 17=2 18=0 19=0 20=0
+OFI from best-level changes (Cont-Kukanov-Stoikov, shares): cumulative = 400, per-message min/max = -500/500, nonzero on 112 of 256 messages
+order book adds dropped (side full): 0
+VCD trace: fpga_sim_core.vcd

@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-labelledby="t d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<title id="t">fpga-sim-core architecture</title>
+<desc id="d">DiscreteEngine clocks TickToTradePipeline, which moves each SyntheticItchStream message through PCS, MAC, parser, book, quote RAM, OFI and DMA stages; class names and sizes are read from the headers.</desc>
+<rect x="0" y="0" width="1280" height="800" fill="#0d1117"/>
+<text x="48" y="50" font-size="24" fill="#e6edf3" text-anchor="start" font-weight="bold">Architecture: what the code instantiates and how a message moves</text>
+<text x="48" y="76" font-size="14" fill="#8b949e" text-anchor="start" font-weight="normal">class names and sizes are read from include/ by scripts/make_figures.py; simulated cycles, synthetic input, not a hardware measurement</text>
+<rect x="450" y="100" width="380" height="112" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="464" y="126" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">DiscreteEngine</text>
+<text x="464" y="150" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">core/discrete_engine.hpp</text>
+<text x="464" y="169" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">clock 322,265,625 Hz, 16 callback slots/edge</text>
+<text x="464" y="188" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">step(): all posedge cbs, then all negedge</text>
+<rect x="48" y="100" width="380" height="112" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="62" y="126" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">SyntheticItchStream</text>
+<text x="62" y="150" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">pipeline/synthetic_itch.hpp</text>
+<text x="62" y="169" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">256 messages, xorshift32 seed 0x5EEDF00D</text>
+<text x="62" y="188" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">bytes via Itch50Encoder + arrival cycles</text>
+<rect x="852" y="100" width="380" height="112" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="866" y="126" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">main.cpp / tests</text>
+<text x="866" y="150" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">registers the pipeline&#x27;s posedge/negedge</text>
+<text x="866" y="169" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">callbacks; the demo adds a VcdLogger</text>
+<text x="866" y="188" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">negedge callback and prints LatencyStats</text>
+<rect x="32" y="250" width="1216" height="390" fill="none" rx="12" stroke="#30363d" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="48" y="276" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">TickToTradePipeline  (pipeline/tick_to_trade.hpp)</text>
+<text x="1232" y="276" font-size="12" fill="#8b949e" text-anchor="end" font-weight="normal">each stage = one-message Slot; hand-off = 1-cycle register; full slot back-pressures</text>
+<line x1="640" y1="212" x2="640" y2="248" stroke="#8b949e" stroke-width="2" stroke-dasharray="4 4"/>
+<path d="M640 248 l-5 -8 h10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<text x="648" y="236" font-size="12" fill="#8b949e" text-anchor="start" font-weight="normal">posedge / negedge callbacks</text>
+<line x1="184" y1="212" x2="184" y2="296" stroke="#8b949e" stroke-width="2"/>
+<path d="M184 296 l-5 -8 h10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<text x="192" y="236" font-size="12" fill="#8b949e" text-anchor="start" font-weight="normal">message(i) at arrival_cycle</text>
+<rect x="48" y="300" width="272" height="132" fill="#161b22" rx="8" stroke="#3fb950" stroke-width="2"/>
+<text x="62" y="326" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">PCS</text>
+<text x="62" y="350" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">Deserializer66b + Crc32</text>
+<text x="62" y="369" font-size="13" fill="#3fb950" text-anchor="start" font-weight="normal">1 block/cycle, 4-6 blocks/msg</text>
+<text x="62" y="388" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">decode(): sync marker + CRC32</text>
+<rect x="352" y="300" width="272" height="132" fill="#161b22" rx="8" stroke="#3fb950" stroke-width="2"/>
+<text x="366" y="326" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">MAC</text>
+<text x="366" y="350" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">MacFramer, Axi4Stream512</text>
+<text x="366" y="369" font-size="13" fill="#3fb950" text-anchor="start" font-weight="normal">1 64-byte beat/cycle</text>
+<text x="366" y="388" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">IPG check: 12 idle bytes</text>
+<rect x="656" y="300" width="272" height="132" fill="#161b22" rx="8" stroke="#e3b341" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="670" y="326" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">PARSE</text>
+<text x="670" y="350" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">Itch50Parser (A/E/X)</text>
+<text x="670" y="369" font-size="13" fill="#e3b341" text-anchor="start" font-weight="normal">2 cycles, fixed parameter</text>
+<text x="670" y="388" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">lengths 36/31/23 B</text>
+<rect x="960" y="300" width="272" height="132" fill="#161b22" rx="8" stroke="#e3b341" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="974" y="326" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">BOOK</text>
+<text x="974" y="350" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">ItchBookApplier</text>
+<text x="974" y="369" font-size="13" fill="#e3b341" text-anchor="start" font-weight="normal">1 cycle, fixed parameter</text>
+<text x="974" y="388" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">OrderTable[128] +</text>
+<text x="974" y="407" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">FiveLevelOrderBook (5/side)</text>
+<line x1="322" y1="366" x2="348" y2="366" stroke="#8b949e" stroke-width="2"/>
+<path d="M348 366 l-8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<line x1="626" y1="366" x2="652" y2="366" stroke="#8b949e" stroke-width="2"/>
+<path d="M652 366 l-8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<line x1="930" y1="366" x2="956" y2="366" stroke="#8b949e" stroke-width="2"/>
+<path d="M956 366 l-8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="960" y="496" width="272" height="132" fill="#161b22" rx="8" stroke="#3fb950" stroke-width="2"/>
+<text x="974" y="522" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">QUOTE RAM</text>
+<text x="974" y="546" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">DualPortBram&lt;BookQuote,</text>
+<text x="974" y="565" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">  32, 1&gt;</text>
+<text x="974" y="584" font-size="13" fill="#3fb950" text-anchor="start" font-weight="normal">A: write quote, B: read back</text>
+<text x="974" y="603" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">read issued from the rd_ slot</text>
+<rect x="656" y="496" width="272" height="132" fill="#161b22" rx="8" stroke="#3fb950" stroke-width="2"/>
+<text x="670" y="522" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">OFI</text>
+<text x="670" y="546" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">OfiDsp (Cont-Kukanov-Stoikov)</text>
+<text x="670" y="565" font-size="13" fill="#3fb950" text-anchor="start" font-weight="normal">3 stages, 1 quote/cycle</text>
+<text x="670" y="584" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">input: quote read back</text>
+<rect x="352" y="496" width="272" height="132" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="366" y="522" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">DMA queue</text>
+<text x="366" y="546" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">RingBuffer of message ids</text>
+<text x="366" y="565" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">dma_q_ depth 64</text>
+<text x="366" y="584" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">in front of the DMA stage</text>
+<rect x="48" y="496" width="272" height="132" fill="#161b22" rx="8" stroke="#e3b341" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="62" y="522" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">DMA</text>
+<text x="62" y="546" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">PcieGen4x16Dma</text>
+<text x="62" y="565" font-size="13" fill="#e3b341" text-anchor="start" font-weight="normal">2 cycles, fixed parameter</text>
+<text x="62" y="584" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">TLP ring 64 + MSI-X</text>
+<line x1="1096" y1="434" x2="1096" y2="492" stroke="#8b949e" stroke-width="2"/>
+<path d="M1096 492 l-5 -8 h10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<text x="1106" y="468" font-size="12" fill="#8b949e" text-anchor="start" font-weight="normal">quote to port A</text>
+<line x1="958" y1="562" x2="932" y2="562" stroke="#8b949e" stroke-width="2"/>
+<path d="M932 562 l8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<line x1="654" y1="562" x2="628" y2="562" stroke="#8b949e" stroke-width="2"/>
+<path d="M628 562 l8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<line x1="350" y1="562" x2="324" y2="562" stroke="#8b949e" stroke-width="2"/>
+<path d="M324 562 l8 -5 v10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<line x1="944" y1="476" x2="944" y2="558" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="863.7" y="453" width="160.6" height="26" fill="#0d1117" rx="13" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="944" y="471" font-size="12" fill="#58a6ff" text-anchor="middle" font-weight="normal">bram_ring_ [16 ids]</text>
+<line x1="640" y1="476" x2="640" y2="558" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="563.4" y="453" width="153.2" height="26" fill="#0d1117" rx="13" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="640" y="471" font-size="12" fill="#58a6ff" text-anchor="middle" font-weight="normal">ofi_ring_ [16 ids]</text>
+<line x1="184" y1="630" x2="184" y2="666" stroke="#8b949e" stroke-width="2"/>
+<path d="M184 666 l-5 -8 h10 z" fill="#8b949e" stroke="#8b949e" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="48" y="670" width="380" height="78" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="62" y="696" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">host drain (instantaneous)</text>
+<text x="62" y="720" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">consume() + clear_msix() in the same</text>
+<text x="62" y="739" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">cycle as the post (no host timing)</text>
+<rect x="450" y="670" width="380" height="78" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="464" y="696" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">LatencyStats</text>
+<text x="464" y="720" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">inclusive cycles: arrival -&gt; DMA post</text>
+<text x="464" y="739" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">min / median / p99 / max, 2-cycle bins</text>
+<rect x="852" y="670" width="380" height="78" fill="#161b22" rx="8" stroke="#30363d" stroke-width="1"/>
+<text x="866" y="696" font-size="16" fill="#e6edf3" text-anchor="start" font-weight="bold">VcdLogger (demo only)</text>
+<text x="866" y="720" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">wire_busy() -&gt; tick_valid, last_ofi()</text>
+<text x="866" y="739" font-size="13" fill="#8b949e" text-anchor="start" font-weight="normal">-&gt; ofi, written to fpga_sim_core.vcd</text>
+<rect x="48" y="772" width="22" height="14" fill="none" rx="3" stroke="#3fb950" stroke-width="2"/>
+<text x="78" y="784" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">cycles derived from data / the module</text>
+<rect x="420" y="772" width="22" height="14" fill="none" rx="3" stroke="#e3b341" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="450" y="784" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">fixed documented parameter</text>
+<rect x="720" y="772" width="30" height="14" fill="none" rx="7" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="758" y="784" font-size="13" fill="#e6edf3" text-anchor="start" font-weight="normal">id FIFO tracking messages in flight</text>
+</svg>

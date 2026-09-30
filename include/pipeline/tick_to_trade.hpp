@@ -16,9 +16,10 @@
 //            passed to MacFramer::accept(). IPG assumed 12 idle bytes. [data]
 //   PARSE    Itch50Parser::parse() has no timing of its own. FIXED modelled
 //            latency parser_cycles = 2 (documented parameter, not derived).
-//   BOOK     FiveLevelOrderBook has no timing of its own. FIXED modelled
-//            latency book_cycles = 1 (documented parameter, not derived).
-//   QUOTE RAM best quote written to DualPortBram<BookQuote,32,kBramLatency>
+//   BOOK     ItchBookApplier (OrderTable + FiveLevelOrderBook) has no
+//            timing of its own. FIXED modelled latency book_cycles = 1
+//            (documented parameter, not derived).
+//   QUOTE RAM best quote written to DualPortBram<BookQuote, 32, PipelineParams::bram_latency>
 //            and read back; latency comes from the BRAM model's template
 //            parameter as it executes. [module]
 //   OFI      OfiDsp::pipeline_stages = 3 stages as it executes. [module]
@@ -39,8 +40,7 @@
 #include "modules/bram_memory.hpp"
 #include "modules/mac_framer.hpp"
 #include "modules/ofi_dsp.hpp"
-#include "modules/order_book.hpp"
-#include "modules/order_table.hpp"
+#include "modules/itch_book.hpp"
 #include "modules/parser_itch50.hpp"
 #include "modules/pcie_dma.hpp"
 #include "modules/phy_pcs.hpp"
@@ -113,7 +113,7 @@ public:
     [[nodiscard]] std::int64_t cumulative_ofi() const noexcept { return cumulative_ofi_; }
     [[nodiscard]] std::int32_t last_ofi() const noexcept { return last_ofi_; }
     [[nodiscard]] bool wire_busy() const noexcept { return pcs_.msg >= 0; }
-    [[nodiscard]] std::uint64_t book_overflow_count() const noexcept { return book_.overflow_count(); }
+    [[nodiscard]] std::uint64_t book_overflow_count() const noexcept { return applier_.book().overflow_count(); }
     [[nodiscard]] std::size_t dma_posted() const noexcept { return dma_.posted_count(); }
     [[nodiscard]] LatencyStats stats() const noexcept {
         return LatencyStats::compute(latency_.data(), completed_);
@@ -269,24 +269,11 @@ private:
     }
 
     void apply_to_book(MsgState& s) noexcept {
-        const ItchEvent& e = s.event;
-        const auto shares = static_cast<std::int32_t>(e.shares);
-        if (e.type == ItchType::add) {
-            const bool bid = e.side == 'B';
-            const auto price = static_cast<std::int32_t>(e.price_ticks);
-            if (!orders_.insert(e.order_reference, bid, price, shares)) fail();
-            book_.add(bid, price, shares);
-        } else if (e.type == ItchType::executed || e.type == ItchType::cancel) {
-            bool bid = false;
-            std::int32_t price = 0, applied = 0;
-            if (!orders_.reduce(e.order_reference, shares, bid, price, applied)) { fail(); }
-            else book_.execute(bid, price, applied);
-        } else {
-            fail();
-        }
-        const BookLevel b = book_.best_bid(), a = book_.best_ask();
-        s.quote = BookQuote{b.valid ? b.price : 0, b.valid ? b.quantity : 0,
-                            a.valid ? a.price : SyntheticItchStream::empty_ask_price, a.valid ? a.quantity : 0};
+        // Anything but a clean update (or a counted book overflow, which the
+        // demo reports and treats as a failed run) is a model error.
+        const ApplyStatus st = applier_.apply(s.event);
+        if (st != ApplyStatus::applied && st != ApplyStatus::book_overflow) fail();
+        s.quote = applier_.quote();
     }
 
     void post_decision(std::uint64_t cycle) noexcept {
@@ -328,8 +315,7 @@ private:
     Deserializer66b pcs_decoder_{};
     MacFramer mac_framer_{};
     Itch50Parser parser_{};
-    OrderTable orders_{};
-    FiveLevelOrderBook book_{};
+    ItchBookApplier applier_{};
     DualPortBram<BookQuote, 32, PipelineParams::bram_latency> bram_{};
     OfiDsp ofi_{};
     DmaStage dma_{};

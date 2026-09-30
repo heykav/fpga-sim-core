@@ -12,6 +12,7 @@
 // which tests use as an oracle against the modules under test.
 
 #include "modules/ofi_dsp.hpp"
+#include "modules/parser_itch50.hpp"
 
 #include <array>
 #include <cstddef>
@@ -55,23 +56,23 @@ private:
         rng_ ^= rng_ << 13U; rng_ ^= rng_ >> 17U; rng_ ^= rng_ << 5U;
         return rng_;
     }
-    static void put_u32(std::uint8_t* p, std::uint32_t v) noexcept {
-        for (int i = 0; i < 4; ++i) p[i] = static_cast<std::uint8_t>(v >> ((3 - i) * 8));
-    }
-    static void put_u64(std::uint8_t* p, std::uint64_t v) noexcept {
-        for (int i = 0; i < 8; ++i) p[i] = static_cast<std::uint8_t>(v >> ((7 - i) * 8));
-    }
     static std::int32_t level_price(bool bid, std::size_t level) noexcept {
         const auto step = static_cast<std::int32_t>(level) * tick;
         return bid ? base_bid - step : base_ask + step;
     }
 
-    void make_header(SyntheticMessage& m, char type, std::size_t length, std::size_t seq) noexcept {
-        m.length = static_cast<std::uint8_t>(length);
-        m.type = type;
-        m.bytes[0] = static_cast<std::uint8_t>(type);
-        put_u32(m.bytes.data() + 1, 1);                       // stock locate (bytes 1-2) / tracking (3-4)
-        put_u32(m.bytes.data() + 7, static_cast<std::uint32_t>(seq));  // low bytes of 48-bit timestamp (5-10)
+    // Header fields common to every synthetic message: stock locate 0,
+    // tracking number 1, timestamp = message index (ns since midnight).
+    static ItchEvent header(ItchType type, std::size_t seq) noexcept {
+        ItchEvent e{};
+        e.type = type;
+        e.tracking_number = 1;
+        e.timestamp_ns = seq;
+        return e;
+    }
+    static void emit(SyntheticMessage& m, const ItchEvent& e) noexcept {
+        m.length = static_cast<std::uint8_t>(Itch50Encoder::encode(e, m.bytes.data(), m.bytes.size()));
+        m.type = static_cast<char>(e.type);
     }
 
     void remove_live(std::size_t index) noexcept {
@@ -116,12 +117,13 @@ private:
         const std::size_t level = static_cast<std::size_t>((a % price_levels) < (b % price_levels) ? a % price_levels : b % price_levels);
         const auto shares = static_cast<std::int32_t>(100U * (1U + next() % 5U));
         const std::uint64_t reference = 1000U + i;
-        make_header(m, 'A', 36, i);
-        put_u64(m.bytes.data() + 11, reference);
-        m.bytes[19] = static_cast<std::uint8_t>(bid ? 'B' : 'S');
-        put_u32(m.bytes.data() + 20, static_cast<std::uint32_t>(shares));
-        std::memcpy(m.bytes.data() + 24, "AAPL    ", 8);
-        put_u32(m.bytes.data() + 32, static_cast<std::uint32_t>(level_price(bid, level)));
+        ItchEvent e = header(ItchType::add, i);
+        e.order_reference = reference;
+        e.side = bid ? 'B' : 'S';
+        e.shares = static_cast<std::uint32_t>(shares);
+        std::memcpy(e.stock.data(), "AAPL    ", 8);
+        e.price_ticks = static_cast<std::uint32_t>(level_price(bid, level));
+        emit(m, e);
         live_[live_count_++] = {reference, shares, level, bid};
         (bid ? bid_qty_ : ask_qty_)[level] += shares;
         ++adds_;
@@ -132,9 +134,10 @@ private:
         Live& o = live_[index];
         const bool full = (next() & 1U) != 0U;
         const std::int32_t shares = (full || o.remaining <= 100) ? o.remaining : 100;
-        make_header(m, type, type == 'E' ? 31 : 23, i);
-        put_u64(m.bytes.data() + 11, o.reference);
-        put_u32(m.bytes.data() + 19, static_cast<std::uint32_t>(shares));
+        ItchEvent e = header(type == 'E' ? ItchType::executed : ItchType::cancel, i);
+        e.order_reference = o.reference;
+        e.shares = static_cast<std::uint32_t>(shares);
+        emit(m, e);   // Executed: match number 0
         (o.bid ? bid_qty_ : ask_qty_)[o.level] -= shares;
         o.remaining -= shares;
         if (o.remaining == 0) remove_live(index);

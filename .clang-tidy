@@ -1,0 +1,18 @@
+# Runs cleanly (zero findings) on main.cpp and tests/*.cpp with clang-tidy 18:
+#   cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+#   clang-tidy -p build main.cpp tests/*.cpp
+# Excluded:
+#   bugprone-easily-swappable-parameters  flags every (bool, int32, int32) module API
+#   bugprone-branch-clone                 flags deliberate "not valid yet"/"not valid any more" test branches
+#   clang-analyzer-optin.performance.Padding  member order is chosen for readability and
+#                                         initialisation order (Rig/Run build the pipeline from the stream)
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-branch-clone,
+  -clang-analyzer-optin.performance.Padding
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(include|tests)/.*'

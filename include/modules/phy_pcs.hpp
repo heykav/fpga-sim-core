@@ -77,7 +77,8 @@ public:
         }
         const std::size_t payload_length = expected_payload_length == 0
             ? (written >= 4 ? written - 4 : 0) : expected_payload_length;
-        if (payload_length + 4 <= written && payload_length <= capacity) {
+        // Written as a subtraction so a huge expected_payload_length cannot wrap.
+        if (written >= 4 && payload_length <= written - 4) {
             const std::size_t crc_offset = payload_length;
             const std::uint32_t expected = (static_cast<std::uint32_t>(payload[crc_offset]) << 24U) |
                 (static_cast<std::uint32_t>(payload[crc_offset + 1]) << 16U) |
