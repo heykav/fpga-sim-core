@@ -81,7 +81,7 @@ int main() {
         assert(a.pipeline.message_ofi(i) == e);
         expected_cumulative += e;
         previous = want;
-        // Lower bound: wire blocks + MAC 1 + parse 2 + book 1 + RAM read 1 + OFI (issue+3 stages) + DMA 2.
+        // Lower bound: wire blocks + MAC 1 + parse 2 + book 1 + RAM read 1 + OFI 3 + DMA 2 = blocks + 10.
         const std::size_t len = a.stream.message(i).length;
         const std::size_t blocks = (len + 4 + 6) / 7;
         assert(a.pipeline.latencies()[i] >= blocks + 10);

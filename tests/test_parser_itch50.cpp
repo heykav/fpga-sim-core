@@ -18,10 +18,10 @@ using fpga_sim::ItchType;
 namespace {
 
 void put_u64be(std::vector<std::uint8_t>& buf, std::size_t offset, std::uint64_t value) {
-    for (int i = 0; i < 8; ++i) buf[offset + i] = static_cast<std::uint8_t>(value >> ((7 - i) * 8));
+    for (std::size_t i = 0; i < 8; ++i) buf[offset + i] = static_cast<std::uint8_t>(value >> ((7 - i) * 8));
 }
 void put_u32be(std::vector<std::uint8_t>& buf, std::size_t offset, std::uint32_t value) {
-    for (int i = 0; i < 4; ++i) buf[offset + i] = static_cast<std::uint8_t>(value >> ((3 - i) * 8));
+    for (std::size_t i = 0; i < 4; ++i) buf[offset + i] = static_cast<std::uint8_t>(value >> ((3 - i) * 8));
 }
 
 std::vector<std::uint8_t> make_add_order(std::uint64_t ref, char side, std::uint32_t shares,
@@ -174,6 +174,147 @@ void reset_clears_prior_state() {
     assert(parser.byte_count() == 0);
 }
 
+// ---- robustness (table-driven) --------------------------------------------
+
+void every_type_byte_is_classified_by_the_documented_length_table() {
+    // Only A/E/X have a verified length. Every other byte value must stop the
+    // parse with unknown_type and consume nothing, whatever follows it.
+    std::vector<std::uint8_t> buf(64, 0);
+    Itch50Parser parser;
+    for (unsigned t = 0; t < 256; ++t) {
+        buf[0] = static_cast<std::uint8_t>(t);
+        const std::size_t n = parser.parse(buf.data(), buf.size());
+        if (t == 'A' || t == 'E' || t == 'X') {
+            // The first message is stepped over (an Add with side 0 counts as
+            // malformed); parsing then stops at the zero byte that follows.
+            assert(n + parser.malformed_count() == 1);
+            assert(parser.bytes_consumed() == fpga_sim::Itch50Layout::length_for(static_cast<std::uint8_t>(t)));
+        } else {
+            assert(n == 0);
+            assert(parser.status() == fpga_sim::ParseStatus::unknown_type);
+            assert(parser.bytes_consumed() == 0);
+        }
+    }
+}
+
+void every_truncation_of_every_type_is_reported_and_never_over_read() {
+    // Each prefix [1, len-1] of a valid message is copied into an exactly
+    // sized heap buffer, so any read past the end is caught by ASan.
+    const std::vector<std::vector<std::uint8_t>> table = {
+        make_add_order(42, 'S', 7, "IBM", 99), make_executed(42, 3), make_cancel(42, 4)};
+    Itch50Parser parser;
+    for (const auto& msg : table) {
+        for (std::size_t cut = 1; cut < msg.size(); ++cut) {
+            std::vector<std::uint8_t> prefix(msg.begin(), msg.begin() + static_cast<std::ptrdiff_t>(cut));
+            assert(parser.parse(prefix.data(), prefix.size()) == 0);
+            assert(parser.status() == fpga_sim::ParseStatus::truncated);
+            assert(parser.bytes_consumed() == 0);
+            assert(parser.byte_count() == cut);
+        }
+        std::vector<std::uint8_t> exact(msg);
+        assert(parser.parse(exact.data(), exact.size()) == 1);
+        assert(parser.status() == fpga_sim::ParseStatus::ok);
+    }
+}
+
+void a_null_buffer_with_nonzero_length_is_rejected_without_reading() {
+    // Regression: parse(nullptr, n > 0) used to dereference the null pointer.
+    Itch50Parser parser;
+    assert(parser.parse(nullptr, 36) == 0);
+    assert(parser.status() == fpga_sim::ParseStatus::null_buffer);
+    assert(parser.bytes_consumed() == 0);
+}
+
+void an_add_with_an_invalid_side_is_skipped_counted_and_parsing_continues() {
+    // Regression: any side byte other than 'B' used to be accepted and was
+    // then treated as a sell by the book update.
+    const char sides[] = {0, 'b', 's', 'X', ' ', static_cast<char>(0xFF)};
+    for (char side : sides) {
+        auto bad = make_add_order(5, side, 10, "AMD", 100);
+        auto good = make_cancel(6, 1);
+        std::vector<std::uint8_t> buf(bad);
+        buf.insert(buf.end(), good.begin(), good.end());
+        Itch50Parser parser;
+        assert(parser.parse(buf.data(), buf.size()) == 1);
+        assert(parser.malformed_count() == 1);
+        assert(parser.status() == fpga_sim::ParseStatus::ok);
+        assert(parser.bytes_consumed() == buf.size());
+        assert(parser.event(0).type == ItchType::cancel && parser.event(0).order_reference == 6);
+        fpga_sim::ItchEvent untouched{};
+        untouched.shares = 77;
+        assert(!Itch50Parser::decode(bad.data(), bad.size(), untouched) && untouched.shares == 77);
+    }
+    for (char side : {'B', 'S'}) {
+        auto ok = make_add_order(5, side, 10, "AMD", 100);
+        Itch50Parser parser;
+        assert(parser.parse(ok.data(), ok.size()) == 1 && parser.event(0).side == side);
+    }
+}
+
+void decode_rejects_a_length_that_does_not_match_the_type() {
+    auto add = make_add_order(1, 'B', 1, "A", 1);
+    fpga_sim::ItchEvent ev{};
+    assert(Itch50Parser::decode(add.data(), 36, ev));
+    for (std::size_t len : {std::size_t{0}, std::size_t{23}, std::size_t{31}, std::size_t{35}})
+        assert(!Itch50Parser::decode(add.data(), len, ev));
+    assert(!Itch50Parser::decode(nullptr, 36, ev));
+}
+
+void fields_are_big_endian_regardless_of_host_byte_order() {
+    // Distinct byte in every position: a little-endian or misaligned read
+    // produces a different value.
+    std::vector<std::uint8_t> msg(36, 0);
+    for (std::size_t i = 0; i < msg.size(); ++i) msg[i] = static_cast<std::uint8_t>(0x10 + i);
+    msg[0] = 'A';
+    msg[19] = 'B';
+    Itch50Parser parser;
+    assert(parser.parse(msg.data(), msg.size()) == 1);
+    const auto& ev = parser.event(0);
+    assert(ev.stock_locate == 0x1112);
+    assert(ev.tracking_number == 0x1314);
+    assert(ev.timestamp_ns == 0x15161718191AULL);
+    assert(ev.order_reference == 0x1B1C1D1E1F202122ULL);
+    assert(ev.shares == 0x24252627U);
+    assert(ev.price_ticks == 0x30313233U);
+}
+
+void extreme_field_values_decode_exactly() {
+    auto msg = make_add_order(0xFFFFFFFFFFFFFFFFULL, 'S', 0xFFFFFFFFU, "ZZZZZZZZ", 0xFFFFFFFFU);
+    for (std::size_t i = 5; i < 11; ++i) msg[i] = 0xFF;   // timestamp = 2^48 - 1
+    Itch50Parser parser;
+    assert(parser.parse(msg.data(), msg.size()) == 1);
+    const auto& ev = parser.event(0);
+    assert(ev.order_reference == 0xFFFFFFFFFFFFFFFFULL);
+    assert(ev.shares == 0xFFFFFFFFU && ev.price_ticks == 0xFFFFFFFFU);
+    assert(ev.timestamp_ns == (1ULL << 48U) - 1U);
+    assert(std::strcmp(ev.stock.data(), "ZZZZZZZZ") == 0);
+}
+
+void input_alignment_does_not_change_the_result() {
+    auto a = make_add_order(0x0102030405060708ULL, 'B', 123, "QQQ", 456);
+    auto e = make_executed(0x0102030405060708ULL, 23);
+    std::vector<std::uint8_t> msgs(a);
+    msgs.insert(msgs.end(), e.begin(), e.end());
+    Itch50Parser reference;
+    assert(reference.parse(msgs.data(), msgs.size()) == 2);
+    for (std::size_t shift = 0; shift < 16; ++shift) {
+        std::vector<std::uint8_t> buf(shift + msgs.size(), 0xEE);
+        std::memcpy(buf.data() + shift, msgs.data(), msgs.size());
+        Itch50Parser parser;
+        assert(parser.parse(buf.data() + shift, msgs.size()) == 2);
+        assert(parser.event(0) == reference.event(0));
+        assert(parser.event(1) == reference.event(1));
+    }
+}
+
+void executed_carries_the_match_number() {
+    auto e = make_executed(9, 1);
+    put_u64be(e, 23, 0xDEADBEEFCAFEF00DULL);
+    Itch50Parser parser;
+    assert(parser.parse(e.data(), e.size()) == 1);
+    assert(parser.event(0).match_number == 0xDEADBEEFCAFEF00DULL);
+}
+
 } // namespace
 
 int main() {
@@ -186,6 +327,15 @@ int main() {
     reports_why_parsing_stopped();
     handles_a_zero_length_buffer();
     reset_clears_prior_state();
+    every_type_byte_is_classified_by_the_documented_length_table();
+    every_truncation_of_every_type_is_reported_and_never_over_read();
+    a_null_buffer_with_nonzero_length_is_rejected_without_reading();
+    an_add_with_an_invalid_side_is_skipped_counted_and_parsing_continues();
+    decode_rejects_a_length_that_does_not_match_the_type();
+    fields_are_big_endian_regardless_of_host_byte_order();
+    extreme_field_values_decode_exactly();
+    input_alignment_does_not_change_the_result();
+    executed_carries_the_match_number();
     std::puts("test_parser_itch50: all assertions passed");
     return 0;
 }

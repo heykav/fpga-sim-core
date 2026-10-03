@@ -38,3 +38,14 @@ jobs:
         run: cmake --build build-san --parallel
       - name: Test
         run: ctest --test-dir build-san --output-on-failure
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+      - name: Configure (compile_commands.json)
+        run: cmake -S . -B build-tidy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: clang-tidy (config in .clang-tidy, warnings are errors)
+        run: clang-tidy --version && clang-tidy -p build-tidy main.cpp tests/*.cpp

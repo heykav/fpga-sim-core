@@ -14,7 +14,7 @@ step across machines; the SVGs are byte-identical for identical inputs).
 
 Usage:
   scripts/make_figures.py --demo /tmp/fpga-build/fpga-sim-demo [--out docs/img]
-                          [--chromium /path/to/chrome]
+                          [--chromium /path/to/chrome] [--no-png]
 
 Every figure is labelled: simulated cycles, synthetic input, not a hardware
 measurement.
@@ -34,9 +34,12 @@ FONT = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monos
 
 THEMES = {
     "dark": dict(bg="#0d1117", panel="#161b22", border="#30363d", fg="#e6edf3", muted="#8b949e",
-                 grid="#21262d", green="#3fb950", blue="#58a6ff", amber="#e3b341", red="#ff7b72"),
+                 grid="#21262d", green="#3fb950", blue="#58a6ff", amber="#e3b341", red="#ff7b72",
+                 # categorical series for message types A/E/X (validated for CVD separation on this surface)
+                 series=("#3987e5", "#d95926", "#199e70")),
     "light": dict(bg="#ffffff", panel="#f6f8fa", border="#d0d7de", fg="#1f2328", muted="#57606a",
-                  grid="#e6eaef", green="#1a7f37", blue="#0969da", amber="#9a6700", red="#cf222e"),
+                  grid="#e6eaef", green="#1a7f37", blue="#0969da", amber="#9a6700", red="#cf222e",
+                  series=("#2a78d6", "#eb6834", "#1baf7a")),
 }
 
 
@@ -46,21 +49,57 @@ def esc(s):
 
 # --------------------------------------------------------------------------- inputs
 def read_source_params():
-    def grab(path, pattern):
-        with open(os.path.join(ROOT, path), encoding="utf-8") as f:
-            m = re.search(pattern, f.read())
+    """Every number and class size drawn in the figures comes from the headers."""
+    cache = {}
+
+    def src(path):
+        if path not in cache:
+            with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+                cache[path] = f.read()
+        return cache[path]
+
+    def grab(path, pattern, base=10):
+        m = re.search(pattern, src(path))
         if not m:
             sys.exit("cannot find %r in %s" % (pattern, path))
-        return int(m.group(1))
+        return int(m.group(1), base)
     t = "include/pipeline/tick_to_trade.hpp"
-    return dict(
+    parser = "include/modules/parser_itch50.hpp"
+    p = dict(
         parser=grab(t, r"parser_cycles\s*=\s*(\d+)"),
         book=grab(t, r"book_cycles\s*=\s*(\d+)"),
         dma=grab(t, r"dma_post_cycles\s*=\s*(\d+)"),
         bram=grab(t, r"bram_latency\s*=\s*(\d+)"),
         ipg=grab(t, r"mac_ipg_idle_bytes\s*=\s*(\d+)"),
         ofi=grab("include/modules/ofi_dsp.hpp", r"pipeline_stages\s*=\s*(\d+)"),
+        bram_depth=grab(t, r"DualPortBram<BookQuote,\s*(\d+),\s*PipelineParams::bram_latency>\s+bram_"),
+        bram_ring=grab(t, r"RingBuffer<std::int32_t,\s*(\d+)>\s+bram_ring_"),
+        ofi_ring=grab(t, r"RingBuffer<std::int32_t,\s*(\d+)>\s+ofi_ring_"),
+        dma_q=grab(t, r"RingBuffer<std::int32_t,\s*(\d+)>\s+dma_q_"),
+        dma_ring=grab("include/modules/pcie_dma.hpp", r"ring_depth\s*=\s*(\d+)"),
+        table=grab("include/modules/order_table.hpp", r"capacity\s*=\s*(\d+)"),
+        levels=grab("include/modules/order_book.hpp", r"levels\s*=\s*(\d+)"),
+        callbacks=grab("include/core/discrete_engine.hpp", r"max_callbacks\s*=\s*(\d+)"),
+        clock_hz=grab("include/core/discrete_engine.hpp", r"clock_hz\s*=\s*(\d+)ULL"),
+        messages=grab("include/pipeline/synthetic_itch.hpp", r"message_count\s*=\s*(\d+)"),
+        seed=grab("include/pipeline/synthetic_itch.hpp", r"seed\s*=\s*0x([0-9A-Fa-f]+)U", 16),
+        block_bytes=grab("include/modules/phy_pcs.hpp", r"bytes_per_block\s*=\s*(\d+)"),
+        beat_bytes=grab("include/bus/axi4_stream.hpp", r"std::array<std::uint8_t,\s*(\d+)>\s+tdata"),
+        len_a=grab(parser, r"add_length\s*=\s*(\d+)"),
+        len_e=grab(parser, r"executed_length\s*=\s*(\d+)"),
+        len_x=grab(parser, r"cancel_length\s*=\s*(\d+)"),
     )
+    # Derived exactly as the pipeline derives them: PCS blocks = ceil((len+4)/7)
+    # (payload + CRC32), MAC beats = ceil(len/64).
+    lens = (p["len_a"], p["len_e"], p["len_x"])
+    p["blocks"] = {k: -(-(n + 4) // p["block_bytes"]) for k, n in zip("AEX", lens)}
+    p["beats"] = {k: -(-n // p["beat_bytes"]) for k, n in zip("AEX", lens)}
+    return p
+
+
+def span(values):
+    lo, hi = min(values), max(values)
+    return str(lo) if lo == hi else "%d-%d" % (lo, hi)
 
 
 def run_demo(demo):
@@ -91,6 +130,16 @@ def parse_demo(out):
         hist[int(m.group(1))] = (int(m.group(2)), int(m.group(3)))
     lo, hi = min(hist), max(hist)
     d["hist"] = [(b, b + 1, hist.get(b, (b + 1, 0))[1]) for b in range(lo, hi + 1, 2)]
+    d["dist"] = {}
+    for key in ("all", "A", "E", "X"):
+        m = re.search(r"^  %s\s+((?:\d+=\d+ ?)+)$" % key, out, re.M)
+        if not m:
+            sys.exit("demo output lacks the 1-cycle distribution row %r" % key)
+        d["dist"][key] = [tuple(int(x) for x in kv.split("=")) for kv in m.group(1).split()]
+    for key in "AEX":
+        assert sum(n for _, n in d["dist"][key]) == int(d["mix"]["AEX".index(key)]), "type row does not match mix"
+    assert [c for c, _ in d["dist"]["A"]] == [c for c, _ in d["dist"]["all"]]
+    assert all(sum(d["dist"][k][i][1] for k in "AEX") == d["dist"]["all"][i][1] for i in range(len(d["dist"]["all"])))
     d["ofi_cum"] = one(r"cumulative = (-?\d+)")
     d["ofi_nonzero"] = one(r"nonzero on (\d+) of")
     d["dropped"] = one(r"adds dropped \(side full\): (\d+)")
@@ -244,43 +293,60 @@ def fig_hero(th, d, wave, p):
     return s
 
 
-def fig_hist(th, d):
+def fig_hist(th, d, p):
+    """Exact 1-cycle latency distribution, stacked by ITCH message type."""
     W, H = 1280, 640
-    s = Svg(W, H, th, "Tick-to-trade latency histogram",
-            "Histogram of per-message latency in simulated cycles for %d synthetic ITCH messages: min %d, median %d, p99 %d, max %d."
-            % (d["messages"], d["min"][0], d["median"][0], d["p99"][0], d["max"][0]))
-    s.text(64, 64, "Tick-to-trade latency, %d synthetic ITCH messages" % d["messages"], 26, weight="bold")
-    s.text(64, 94, "%s" % DISCLAIMER, 16, th["amber"])
-    x0, x1, y0, y1 = 120, 1216, 150, 500
-    bins = d["hist"]
-    peak = max(b[2] for b in bins)
-    top = ((peak + 49) // 50) * 50
-    for v in range(0, top + 1, 50):
+    dist = d["dist"]
+    cycles = [c for c, _ in dist["all"]]
+    names = {"A": "Add Order", "E": "Order Executed", "X": "Order Cancel"}
+    lens = {"A": p["len_a"], "E": p["len_e"], "X": p["len_x"]}
+    s = Svg(W, H, th, "Tick-to-trade latency by message type",
+            "Per-message latency in simulated cycles for %d synthetic ITCH messages, 1-cycle bins stacked by type: %s. "
+            "Median %d, p99 %d." % (d["messages"], "; ".join(
+                "%d cycles: %d" % (c, n) for c, n in dist["all"]), d["median"][0], d["p99"][0]))
+    s.text(64, 60, "Tick-to-trade latency, %d synthetic ITCH messages" % d["messages"], 26, weight="bold")
+    s.text(64, 90, DISCLAIMER, 16, th["amber"])
+    # legend (identity is never colour-alone: every bar also carries its total, the table is in the README)
+    lx = 64
+    for i, k in enumerate("AEX"):
+        s.rect(lx, 112, 14, 14, fill=th["series"][i], rx=3)
+        label = "%s  %s, %d B = %d PCS blocks" % (k, names[k], lens[k], p["blocks"][k])
+        s.text(lx + 22, 124, label, 14, th["fg"])
+        lx += 22 + len(label) * 8.4 + 34
+    x0, x1, y0, y1 = 120, 1216, 170, 500
+    peak = max(n for _, n in dist["all"])
+    top = ((peak + 19) // 20) * 20
+    for v in range(0, top + 1, 20):
         yy = y1 - v / top * (y1 - y0)
         s.line(x0, yy, x1, yy, th["grid"])
         s.text(x0 - 12, yy + 5, str(v), 14, th["muted"], "end")
-    s.text(x0, y0 - 18, "messages per 2-cycle bin", 14, th["muted"])
-    slot = (x1 - x0) / len(bins)
-    bw = min(slot * 0.66, 150)
-    for i, (a, b, c) in enumerate(bins):
+    s.text(x0 - 12, y0 - 18, "messages", 14, th["muted"])
+    slot = (x1 - x0) / len(cycles)
+    bw = min(slot * 0.62, 120)
+    for i, c in enumerate(cycles):
         cx = x0 + slot * (i + 0.5)
-        h = c / top * (y1 - y0)
-        s.rect(cx - bw / 2, y1 - h, bw, h, fill=th["blue"], rx=3)
-        s.text(cx, y1 - h - 10, str(c), 18, th["fg"], "middle", "bold")
-        s.text(cx, y1 + 30, "%d-%d" % (a, b), 16, th["fg"], "middle")
-    s.text((x0 + x1) / 2, y1 + 64, "latency (simulated cycles, 1 cycle = %s ns)" % d["mhz"][1], 15, th["muted"], "middle")
-    # markers for the percentile statistics, placed in their bins
-    def bin_x(cyc):
-        for i, (a, b, _) in enumerate(bins):
-            if a <= cyc <= b:
-                return x0 + slot * (i + 0.5) + (cyc - a - 0.5) * (bw / 2.4)
-    for k, col, row in (("median", th["green"], 0), ("p99", th["amber"], 1)):
-        bx = bin_x(d[k][0])
-        s.line(bx, y1 - 6, bx, y0 + 30 + row * 28, col, 2, "5 4")
-        s.text(bx + 8, y0 + 44 + row * 28, "%s = %d cycles" % (k, d[k][0]), 15, col, weight="bold")
-    s.text(64, 590, "min %d  |  median %d  |  p99 %d  |  max %d cycles   (%s / %s / %s / %s ns)"
-           % (d["min"][0], d["median"][0], d["p99"][0], d["max"][0], d["min"][1], d["median"][1], d["p99"][1], d["max"][1]), 16)
-    s.text(64, 616, "source: ./fpga-sim-demo, PRNG seed %s, %d cycles simulated" % (d["seed"], d["cycles"]), 13, th["muted"])
+        y = y1
+        for k_i, k in enumerate("AEX"):
+            n = dict(dist[k])[c]
+            if n == 0:
+                continue
+            h = n / top * (y1 - y0)
+            # 2 px surface gap between stacked segments; rounded end only where it meets nothing
+            s.rect(cx - bw / 2, y - h, bw, max(h - 2, 1), fill=th["series"][k_i], rx=2)
+            y -= h
+        total = dict(dist["all"])[c]
+        s.text(cx, y - 10, str(total), 18, th["fg"], "middle", "bold")
+        s.text(cx, y1 + 28, str(c), 16, th["fg"], "middle")
+        tags = [k for k in ("median", "p99") if d[k][0] == c] + (["min"] if d["min"][0] == c else []) + (["max"] if d["max"][0] == c else [])
+        if tags:
+            s.text(cx, y1 + 50, " / ".join(tags), 14, th["muted"], "middle", "bold")
+    s.text((x0 + x1) / 2, y1 + 80, "latency (simulated cycles, 1 cycle = %s ns)" % d["mhz"][1], 15, th["muted"], "middle")
+    offsets = {min(c for c, n in dist[t] if n) - p["blocks"][t] for t in "AEX"}
+    if len(offsets) == 1:
+        s.text(64, 606, "Lowest latency of each type = its PCS block count + %d, so the spread is set by message length; "
+               "anything above that is waiting behind earlier messages." % offsets.pop(), 13, th["muted"])
+    s.text(64, 626, "source: ./fpga-sim-demo 1-cycle distribution, PRNG seed %s, %d cycles simulated; min/median/p99/max = %d/%d/%d/%d cycles"
+           % (d["seed"], d["cycles"], d["min"][0], d["median"][0], d["p99"][0], d["max"][0]), 13, th["muted"])
     return s
 
 
@@ -385,10 +451,10 @@ def fig_pipeline(th, p):
     s.text(48, 54, "Tick-to-trade pipeline (include/pipeline/tick_to_trade.hpp)", 24, weight="bold")
     s.text(48, 80, "latency is counted in simulated cycles; every stage hand-off is a one-cycle register", 15, th["muted"])
     stages = [
-        ("PCS", "Deserializer66b", "1 block/cycle", "4-6 blocks/msg", False),
-        ("MAC", "MacFramer", "1 beat/cycle", "1 beat/msg", False),
+        ("PCS", "Deserializer66b", "1 block/cycle", "%s blocks/msg" % span(p["blocks"].values()), False),
+        ("MAC", "MacFramer", "1 beat/cycle", "%s beat/msg" % span(p["beats"].values()), False),
         ("PARSE", "Itch50Parser", "%d cycles" % p["parser"], "fixed parameter", True),
-        ("BOOK", "FiveLevelOrderBook", "%d cycle" % p["book"], "fixed parameter", True),
+        ("BOOK", "ItchBookApplier", "%d cycle" % p["book"], "fixed parameter", True),
         ("QUOTE RAM", "DualPortBram", "latency %d" % p["bram"], "write + read-back", False),
         ("OFI", "OfiDsp", "%d stages" % p["ofi"], "as executed", False),
         ("DMA", "PcieGen4x16Dma", "%d cycles" % p["dma"], "fixed parameter", True),
@@ -417,6 +483,115 @@ def fig_pipeline(th, p):
     s.text(x0, 414, "Latency = inclusive cycles from a message's first PCS block arriving to its decision record being posted (queueing behind earlier messages included).", 13, th["muted"])
     s.text(x0, 438, "Parameter values are read from the source by scripts/make_figures.py. \"Trade\" means the record post; no order is sent.", 13, th["muted"])
     s.text(x0, 462, DISCLAIMER, 13, th["amber"])
+    return s
+
+
+def fig_architecture(th, p):
+    """Module/class structure of the tick-to-trade model, sizes read from the headers."""
+    W, H = 1280, 800
+    s = Svg(W, H, th, "fpga-sim-core architecture",
+            "DiscreteEngine clocks TickToTradePipeline, which moves each SyntheticItchStream message through "
+            "PCS, MAC, parser, book, quote RAM, OFI and DMA stages; class names and sizes are read from the headers.")
+    s.text(48, 50, "Architecture: what the code instantiates and how a message moves", 24, weight="bold")
+    s.text(48, 76, "class names and sizes are read from include/ by scripts/make_figures.py; " + DISCLAIMER, 14, th["muted"])
+
+    def box(x, y, w, h, title, lines, accent=None, dash=None, title_size=16):
+        s.rect(x, y, w, h, fill=th["panel"], stroke=accent or th["border"], rx=8, sw=2 if accent else 1, dash=dash)
+        s.text(x + 14, y + 26, title, title_size, th["fg"], weight="bold")
+        for i, ln in enumerate(lines):
+            col, txt = (th["muted"], ln) if not isinstance(ln, tuple) else ln
+            s.text(x + 14, y + 50 + 19 * i, txt, 13, col)
+
+    def arrow(x1, y1, x2, y2, label=None, col=None, dash=None):
+        col = col or th["muted"]
+        s.line(x1, y1, x2, y2, col, 2, dash)
+        if x1 == x2:
+            d = 1 if y2 > y1 else -1
+            s.path("M%g %g l-5 %g h10 z" % (x2, y2, -8 * d), col, 1, col)
+        else:
+            d = 1 if x2 > x1 else -1
+            s.path("M%g %g l%g -5 v10 z" % (x2, y2, -8 * d), col, 1, col)
+        if label:
+            s.text((x1 + x2) / 2, min(y1, y2) - 8 if y1 == y2 else (y1 + y2) / 2, label, 12, th["muted"], "middle")
+
+    def fifo(cx, cy, name, depth):
+        label = "%s [%d ids]" % (name, depth)
+        w = len(label) * 7.4 + 20
+        s.rect(cx - w / 2, cy - 13, w, 26, fill=th["bg"], stroke=th["blue"], rx=13, sw=1.5)
+        s.text(cx, cy + 5, label, 12, th["blue"], "middle")
+
+    # ---- top row: clock, stimulus, driver
+    box(450, 100, 380, 112, "DiscreteEngine", [
+        "core/discrete_engine.hpp",
+        (th["fg"], "clock %s Hz, %d callback slots/edge" % ("{:,}".format(p["clock_hz"]), p["callbacks"])),
+        "step(): all posedge cbs, then all negedge"])
+    box(48, 100, 380, 112, "SyntheticItchStream", [
+        "pipeline/synthetic_itch.hpp",
+        (th["fg"], "%d messages, xorshift32 seed 0x%08X" % (p["messages"], p["seed"])),
+        "bytes via Itch50Encoder + arrival cycles"])
+    box(852, 100, 380, 112, "main.cpp / tests", [
+        "registers the pipeline's posedge/negedge",
+        "callbacks; the demo adds a VcdLogger",
+        "negedge callback and prints LatencyStats"])
+
+    # ---- pipeline container
+    cy0, cy1 = 250, 640
+    s.rect(32, cy0, 1216, cy1 - cy0, stroke=th["border"], rx=12, sw=1.5, dash="6 5")
+    s.text(48, cy0 + 26, "TickToTradePipeline  (pipeline/tick_to_trade.hpp)", 16, th["fg"], weight="bold")
+    s.text(1232, cy0 + 26, "each stage = one-message Slot; hand-off = 1-cycle register; full slot back-pressures", 12, th["muted"], "end")
+    arrow(640, 212, 640, cy0 - 2, None, th["muted"], "4 4")
+    s.text(648, 236, "posedge / negedge callbacks", 12, th["muted"])
+    arrow(184, 212, 184, cy0 + 46, None)
+    s.text(192, 236, "message(i) at arrival_cycle", 12, th["muted"])
+
+    fixed = th["amber"]
+    derived = th["green"]
+    bw, bh, r1 = 272, 132, cy0 + 50
+    xs = [48 + i * (bw + 32) for i in range(4)]
+    blocks = span(p["blocks"].values())
+    box(xs[0], r1, bw, bh, "PCS", ["Deserializer66b + Crc32", (derived, "1 block/cycle, %s blocks/msg" % blocks),
+                                   "decode(): sync marker + CRC32"], derived)
+    box(xs[1], r1, bw, bh, "MAC", ["MacFramer, Axi4Stream512", (derived, "1 %d-byte beat/cycle" % p["beat_bytes"]),
+                                   "IPG check: %d idle bytes" % p["ipg"]], derived)
+    box(xs[2], r1, bw, bh, "PARSE", ["Itch50Parser (A/E/X)", (fixed, "%d cycles, fixed parameter" % p["parser"]),
+                                     "lengths %d/%d/%d B" % (p["len_a"], p["len_e"], p["len_x"])], fixed, "7 5")
+    box(xs[3], r1, bw, bh, "BOOK", ["ItchBookApplier", (fixed, "%d cycle, fixed parameter" % p["book"]),
+                                    "OrderTable[%d] +" % p["table"],
+                                    "FiveLevelOrderBook (%d/side)" % p["levels"]], fixed, "7 5")
+    for i in range(3):
+        arrow(xs[i] + bw + 2, r1 + bh / 2, xs[i + 1] - 4, r1 + bh / 2)
+
+    r2 = r1 + bh + 64
+    xr = [xs[3], xs[2], xs[1], xs[0]]   # second row runs right to left
+    box(xr[0], r2, bw, bh, "QUOTE RAM", ["DualPortBram<BookQuote,", "  %d, %d>" % (p["bram_depth"], p["bram"]),
+                                         (derived, "A: write quote, B: read back"), "read issued from the rd_ slot"], derived)
+    box(xr[1], r2, bw, bh, "OFI", ["OfiDsp (Cont-Kukanov-Stoikov)", (derived, "%d stages, 1 quote/cycle" % p["ofi"]),
+                                   "input: quote read back"], derived)
+    box(xr[2], r2, bw, bh, "DMA queue", ["RingBuffer of message ids", (th["fg"], "dma_q_ depth %d" % p["dma_q"]),
+                                         "in front of the DMA stage"])
+    box(xr[3], r2, bw, bh, "DMA", ["PcieGen4x16Dma", (fixed, "%d cycles, fixed parameter" % p["dma"]),
+                                   "TLP ring %d + MSI-X" % p["dma_ring"]], fixed, "7 5")
+    arrow(xs[3] + bw / 2, r1 + bh + 2, xs[3] + bw / 2, r2 - 4)
+    s.text(xs[3] + bw / 2 + 10, r1 + bh + 36, "quote to port A", 12, th["muted"])
+    for i in range(3):
+        arrow(xr[i] - 2, r2 + bh / 2, xr[i + 1] + bw + 4, r2 + bh / 2)
+    for (a, b), name, depth in (((xr[1], xr[0]), "bram_ring_", p["bram_ring"]), ((xr[2], xr[1]), "ofi_ring_", p["ofi_ring"])):
+        gx = (a + bw + b) / 2
+        s.line(gx, r2 - 20, gx, r2 + bh / 2 - 4, th["blue"], 1, "3 3")
+        fifo(gx, r2 - 30, name, depth)
+
+    # ---- outputs
+    oy = cy1 + 30
+    arrow(xs[0] + bw / 2, r2 + bh + 2, xs[0] + bw / 2, oy - 4)
+    box(48, oy, 380, 78, "host drain (instantaneous)", ["consume() + clear_msix() in the same", "cycle as the post (no host timing)"])
+    box(450, oy, 380, 78, "LatencyStats", ["inclusive cycles: arrival -> DMA post",
+                                          "min / median / p99 / max, 2-cycle bins"])
+    box(852, oy, 380, 78, "VcdLogger (demo only)", ["wire_busy() -> tick_valid, last_ofi()",
+                                                   "-> ofi, written to fpga_sim_core.vcd"])
+    ly = H - 16
+    s.rect(48, ly - 12, 22, 14, stroke=derived, sw=2, rx=3); s.text(78, ly, "cycles derived from data / the module", 13)
+    s.rect(420, ly - 12, 22, 14, stroke=fixed, sw=2, rx=3, dash="5 3"); s.text(450, ly, "fixed documented parameter", 13)
+    s.rect(720, ly - 12, 30, 14, stroke=th["blue"], sw=1.5, rx=7); s.text(758, ly, "id FIFO tracking messages in flight", 13)
     return s
 
 
@@ -493,6 +668,7 @@ def main():
     ap.add_argument("--demo", required=True, help="path to the built fpga-sim-demo executable")
     ap.add_argument("--out", default=os.path.join(ROOT, "docs", "img"))
     ap.add_argument("--chromium", help="Chromium binary used only to rasterise social-preview.png")
+    ap.add_argument("--no-png", action="store_true", help="write the SVGs only; leave social-preview.png untouched")
     a = ap.parse_args()
     out, vcd = run_demo(a.demo)
     d, p, wave = parse_demo(out), read_source_params(), parse_vcd(vcd)
@@ -504,12 +680,13 @@ def main():
 
     for tn, th in THEMES.items():
         write("hero-%s.svg" % tn, fig_hero(th, d, wave, p))
-        write("latency-histogram-%s.svg" % tn, fig_hist(th, d))
+        write("latency-histogram-%s.svg" % tn, fig_hist(th, d, p))
         write("summary-card-%s.svg" % tn, fig_card(th, d))
         write("waveform-%s.svg" % tn, fig_wave(th, d, wave))
         write("pipeline-%s.svg" % tn, fig_pipeline(th, p))
+        write("architecture-%s.svg" % tn, fig_architecture(th, p))
     write("social-preview.svg", fig_social(d, wave))
-    chrome = find_chromium(a.chromium)
+    chrome = None if a.no_png else find_chromium(a.chromium)
     if chrome:
         subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
                         "--window-size=1280,760", "--screenshot=" + os.path.join(a.out, "social-preview.png"),
@@ -517,7 +694,7 @@ def main():
                        check=True, capture_output=True)
         crop_png(os.path.join(a.out, "social-preview.png"), 1280, 640)
     else:
-        print("no Chromium found: social-preview.png not regenerated", file=sys.stderr)
+        print("social-preview.png not regenerated (%s)" % ("--no-png" if a.no_png else "no Chromium found"), file=sys.stderr)
 
 
 if __name__ == "__main__":

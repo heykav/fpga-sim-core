@@ -77,6 +77,20 @@ int main() {
         std::putchar('\n');
     }
 
+    // Exact per-cycle counts, overall and per message type (the histogram
+    // above groups them in pairs).
+    std::printf("latency distribution, 1-cycle resolution (cycles=messages):\n");
+    for (const char type : {'*', 'A', 'E', 'X'}) {
+        std::printf("  %s", type == '*' ? "all" : (type == 'A' ? "A  " : (type == 'E' ? "E  " : "X  ")));
+        for (std::uint32_t c = s.min; c <= s.max; ++c) {
+            std::uint32_t n = 0;
+            for (std::size_t i = 0; i < s.count; ++i)
+                if (rig.pipeline.latencies()[i] == c && (type == '*' || st.message(i).type == type)) ++n;
+            std::printf(" %u=%u", c, n);
+        }
+        std::putchar('\n');
+    }
+
     std::size_t nonzero = 0;
     std::int32_t lo = 0, hi = 0;
     for (std::size_t i = 0; i < SyntheticItchStream::message_count; ++i) {
