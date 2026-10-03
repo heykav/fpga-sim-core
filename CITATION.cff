@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "fpga-sim-core"
+abstract: >-
+  A deterministic C++20 cycle model of a tick-to-trade datapath, driven by a
+  synthetic ITCH 5.0 stream. Reported latencies are simulated-cycle counts,
+  not hardware measurements.
+type: software
+authors:
+  - family-names: "Anubhav"
+    given-names: "Krishna"
+repository-code: "https://github.com/heykav/fpga-sim-core"
+license: MIT
+version: "1.0.0"
