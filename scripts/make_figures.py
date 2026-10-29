@@ -33,10 +33,10 @@ DISCLAIMER = "simulated cycles, synthetic input, not a hardware measurement"
 FONT = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
 
 THEMES = {
-    "dark": dict(bg="#0d1117", panel="#161b22", border="#30363d", fg="#e6edf3", muted="#8b949e",
-                 grid="#21262d", green="#3fb950", blue="#58a6ff", amber="#e3b341", red="#ff7b72"),
-    "light": dict(bg="#ffffff", panel="#f6f8fa", border="#d0d7de", fg="#1f2328", muted="#57606a",
-                  grid="#e6eaef", green="#1a7f37", blue="#0969da", amber="#9a6700", red="#cf222e"),
+    "dark": dict(bg="#090A09", panel="#111211", border="#2a2c29", fg="#F4F5F2", muted="#9a9c96",
+                 grid="#1a1b1a", green="#00FF66", blue="#B6FF2E", amber="#e3b341", red="#ff5f57"),
+    "light": dict(bg="#F4F5F2", panel="#eceeea", border="#c4c7c0", fg="#111211", muted="#54564f",
+                  grid="#e2e3df", green="#00A84A", blue="#5f9a00", amber="#8a5d00", red="#d1342b"),
 }
 
 

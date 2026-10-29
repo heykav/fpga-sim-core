@@ -19,6 +19,13 @@ a pipeline whose stage latencies are documented parameters (table below). It is
 not a hardware measurement, not market data, and not a claim about the latency
 of any real FPGA or NIC.
 
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/datapath-dark.svg">
+  <img src="docs/img/datapath-light.svg" alt="Animated datapath diagram: one message flows through PCS, MAC, ITCH 5.0 parser, order book, OFI and PCIe DMA. Solid boxes have cycle counts derived from the module as it runs; dashed boxes are fixed documented model parameters. Illustrative; simulated cycles on a synthetic input, not a hardware measurement." width="1000">
+</picture>
+</p>
+
 The scheduler (`core/discrete_engine.hpp`) keeps posedge/negedge callbacks in
 a fixed `std::array<Slot, 16>`, not a `std::vector` or `std::function`, so
 registering a clock edge costs no heap allocation and no virtual dispatch; the
@@ -153,6 +160,7 @@ upload as the repository social preview in the GitHub settings):
 
 ```sh
 python3 scripts/make_figures.py --demo /tmp/fpga-build/fpga-sim-demo
+python3 scripts/make_datapath.py   # animated datapath diagram, reads stage cycles from the headers
 ```
 
 Only the standard library is used (plain SVG generation); nothing is added to
