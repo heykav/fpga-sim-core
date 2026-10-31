@@ -51,6 +51,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace fpga_sim {
 
@@ -71,17 +72,17 @@ struct LatencyStats {
     std::array<std::uint32_t, histogram_bins> histogram{};
 
     // Nearest-rank percentiles on the sorted samples (integer index arithmetic).
-    static LatencyStats compute(const std::uint32_t* samples, std::size_t n) noexcept {
+    // `scratch` must hold at least n elements; it is overwritten.
+    static LatencyStats compute_with(const std::uint32_t* samples, std::size_t n, std::uint32_t* scratch) noexcept {
         LatencyStats s{};
         if (n == 0) return s;
-        std::array<std::uint32_t, SyntheticItchStream::message_count> sorted{};
-        for (std::size_t i = 0; i < n; ++i) sorted[i] = samples[i];
-        std::sort(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(n));
+        for (std::size_t i = 0; i < n; ++i) scratch[i] = samples[i];
+        std::sort(scratch, scratch + n);
         s.count = n;
-        s.min = sorted[0];
-        s.max = sorted[n - 1];
-        s.median = sorted[(50 * n + 99) / 100 - 1];
-        s.p99 = sorted[(99 * n + 99) / 100 - 1];
+        s.min = scratch[0];
+        s.max = scratch[n - 1];
+        s.median = scratch[(50 * n + 99) / 100 - 1];
+        s.p99 = scratch[(99 * n + 99) / 100 - 1];
         for (std::size_t i = 0; i < n; ++i) {
             std::size_t bin = samples[i] / bin_width_cycles;
             if (bin >= histogram_bins) bin = histogram_bins - 1;
@@ -89,23 +90,33 @@ struct LatencyStats {
         }
         return s;
     }
+
+    // Synthetic-stream convenience: stack scratch sized for the 256-message stream.
+    static LatencyStats compute(const std::uint32_t* samples, std::size_t n) noexcept {
+        std::array<std::uint32_t, SyntheticItchStream::message_count> sorted{};
+        if (n > sorted.size()) return LatencyStats{};
+        return compute_with(samples, n, sorted.data());
+    }
 };
 
-class TickToTradePipeline {
+// Stream concept: static message_count (capacity), static order_capacity, static empty_ask_price,
+// count() (messages actually present, <= message_count), message(i) with .bytes/.length/.arrival_cycle.
+template <class Stream>
+class BasicTickToTradePipeline {
 public:
-    static constexpr std::size_t message_count = SyntheticItchStream::message_count;
+    static constexpr std::size_t message_count = Stream::message_count;
 
-    explicit TickToTradePipeline(const SyntheticItchStream& stream) noexcept : stream_(stream) {}
+    explicit BasicTickToTradePipeline(const Stream& stream) noexcept : stream_(stream) {}
 
     static void posedge_callback(void* context, std::uint64_t cycle) noexcept {
-        static_cast<TickToTradePipeline*>(context)->posedge(cycle);
+        static_cast<BasicTickToTradePipeline*>(context)->posedge(cycle);
     }
     static void negedge_callback(void* context, std::uint64_t cycle) noexcept {
-        static_cast<TickToTradePipeline*>(context)->negedge(cycle);
+        static_cast<BasicTickToTradePipeline*>(context)->negedge(cycle);
     }
 
-    [[nodiscard]] bool done() const noexcept { return completed_ == message_count || error_; }
-    [[nodiscard]] bool ok() const noexcept { return !error_ && completed_ == message_count; }
+    [[nodiscard]] bool done() const noexcept { return completed_ == stream_.count() || error_; }
+    [[nodiscard]] bool ok() const noexcept { return !error_ && completed_ == stream_.count(); }
     [[nodiscard]] std::size_t completed() const noexcept { return completed_; }
     [[nodiscard]] const std::uint32_t* latencies() const noexcept { return latency_.data(); }
     [[nodiscard]] std::int32_t message_ofi(std::size_t i) const noexcept { return state_[i].ofi; }
@@ -117,6 +128,10 @@ public:
     [[nodiscard]] std::size_t dma_posted() const noexcept { return dma_.posted_count(); }
     [[nodiscard]] LatencyStats stats() const noexcept {
         return LatencyStats::compute(latency_.data(), completed_);
+    }
+    // For streams larger than the synthetic one: caller provides scratch for n >= completed() samples.
+    [[nodiscard]] LatencyStats stats_with(std::uint32_t* scratch) const noexcept {
+        return LatencyStats::compute_with(latency_.data(), completed_, scratch);
     }
 
 private:
@@ -222,8 +237,8 @@ private:
         }
 
         // ---- PCS: pick the next arrived message, receive one block per cycle ----
-        if (pcs_.free() && next_msg_ < message_count && cycle >= stream_.message(next_msg_).arrival_cycle) {
-            const SyntheticMessage& m = stream_.message(next_msg_);
+        if (pcs_.free() && next_msg_ < stream_.count() && cycle >= stream_.message(next_msg_).arrival_cycle) {
+            const auto& m = stream_.message(next_msg_);
             MsgState& s = state_[next_msg_];
             s.block_count = Deserializer66b::encode(m.bytes.data(), m.length, s.blocks.data(), s.blocks.size());
             if (s.block_count == 0) fail();
@@ -271,22 +286,37 @@ private:
     void apply_to_book(MsgState& s) noexcept {
         const ItchEvent& e = s.event;
         const auto shares = static_cast<std::int32_t>(e.shares);
-        if (e.type == ItchType::add) {
+        if (e.type == ItchType::add || e.type == ItchType::add_mpid) {
             const bool bid = e.side == 'B';
             const auto price = static_cast<std::int32_t>(e.price_ticks);
             if (!orders_.insert(e.order_reference, bid, price, shares)) fail();
             book_.add(bid, price, shares);
-        } else if (e.type == ItchType::executed || e.type == ItchType::cancel) {
+        } else if (e.type == ItchType::executed || e.type == ItchType::executed_price || e.type == ItchType::cancel) {
             bool bid = false;
             std::int32_t price = 0, applied = 0;
             if (!orders_.reduce(e.order_reference, shares, bid, price, applied)) { fail(); }
             else book_.execute(bid, price, applied);
+        } else if (e.type == ItchType::delete_order) {
+            bool bid = false;
+            std::int32_t price = 0, applied = 0;
+            if (!orders_.reduce(e.order_reference, std::numeric_limits<std::int32_t>::max(), bid, price, applied)) { fail(); }
+            else book_.execute(bid, price, applied);
+        } else if (e.type == ItchType::replace) {
+            bool bid = false;
+            std::int32_t price = 0, applied = 0;
+            if (!orders_.reduce(e.order_reference, std::numeric_limits<std::int32_t>::max(), bid, price, applied)) { fail(); }
+            else {
+                book_.execute(bid, price, applied);
+                const auto new_price = static_cast<std::int32_t>(e.price_ticks);
+                if (!orders_.insert(e.new_reference, bid, new_price, shares)) fail();
+                book_.add(bid, new_price, shares);
+            }
         } else {
             fail();
         }
         const BookLevel b = book_.best_bid(), a = book_.best_ask();
         s.quote = BookQuote{b.valid ? b.price : 0, b.valid ? b.quantity : 0,
-                            a.valid ? a.price : SyntheticItchStream::empty_ask_price, a.valid ? a.quantity : 0};
+                            a.valid ? a.price : Stream::empty_ask_price, a.valid ? a.quantity : 0};
     }
 
     void post_decision(std::uint64_t cycle) noexcept {
@@ -320,15 +350,15 @@ private:
     // DMA stage slot bundled with the DMA model instance.
     struct DmaStage : Slot {
         PcieGen4x16Dma engine{};
-        [[nodiscard]] bool msg_valid() const noexcept { return msg >= 0; }
+        [[nodiscard]] bool msg_valid() const noexcept { return this->msg >= 0; }
         [[nodiscard]] std::size_t posted_count() const noexcept { return engine.posted_count(); }
     };
 
-    const SyntheticItchStream& stream_;
+    const Stream& stream_;
     Deserializer66b pcs_decoder_{};
     MacFramer mac_framer_{};
     Itch50Parser parser_{};
-    OrderTable orders_{};
+    BasicOrderTable<Stream::order_capacity> orders_{};
     FiveLevelOrderBook book_{};
     DualPortBram<BookQuote, 32, PipelineParams::bram_latency> bram_{};
     OfiDsp ofi_{};
@@ -347,5 +377,7 @@ private:
     std::int32_t last_ofi_ = 0;
     bool error_ = false;
 };
+
+using TickToTradePipeline = BasicTickToTradePipeline<SyntheticItchStream>;
 
 } // namespace fpga_sim

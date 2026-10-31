@@ -31,6 +31,7 @@ struct SyntheticMessage {
 class SyntheticItchStream {
 public:
     static constexpr std::size_t message_count = 256;
+    static constexpr std::size_t order_capacity = 128;  // live-order table size the pipeline uses for this stream
     static constexpr std::uint32_t seed = 0x5EEDF00DU;
     static constexpr std::int32_t base_bid = 1892500;   // 189.2500 in ITCH 1/10000 price units
     static constexpr std::int32_t base_ask = 1893000;
@@ -40,6 +41,7 @@ public:
 
     SyntheticItchStream() noexcept { generate(); }
 
+    [[nodiscard]] std::size_t count() const noexcept { return message_count; }
     [[nodiscard]] const SyntheticMessage& message(std::size_t i) const noexcept { return messages_[i]; }
     // Best bid/ask after message i, from the generator's own bookkeeping.
     // Empty bid side is {0,0}; empty ask side is {empty_ask_price, 0}.

@@ -10,9 +10,10 @@ namespace fpga_sim {
 // behaviour and iteration order are identical on every platform). ITCH
 // Executed/Cancel messages carry only an order reference; this table recovers
 // the side and price of the resting order so the book can be updated.
-class OrderTable {
+template <std::size_t Capacity>
+class BasicOrderTable {
 public:
-    static constexpr std::size_t capacity = 128;
+    static constexpr std::size_t capacity = Capacity;
 
     struct Entry {
         std::uint64_t reference = 0;
@@ -56,5 +57,7 @@ public:
 private:
     std::array<Entry, capacity> entries_{};
 };
+
+using OrderTable = BasicOrderTable<128>;
 
 } // namespace fpga_sim

@@ -29,3 +29,12 @@ foreach(t discrete-engine order-book vcd-logger hot-path-alloc ofi pipeline-gold
   target_link_libraries(test-${t} PRIVATE fpga-sim-core)
   add_test(NAME test-${t} COMMAND test-${t})
 endforeach()
+
+add_executable(fpga-sim-itch-replay tools/itch_replay.cpp)
+target_link_libraries(fpga-sim-itch-replay PRIVATE fpga-sim-core)
+target_include_directories(fpga-sim-itch-replay PRIVATE tools)
+
+add_executable(test-real-itch tests/test_real_itch.cpp)
+target_link_libraries(test-real-itch PRIVATE fpga-sim-core)
+target_include_directories(test-real-itch PRIVATE tools)
+add_test(NAME test-real-itch COMMAND test-real-itch)
