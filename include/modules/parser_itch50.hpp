@@ -6,11 +6,18 @@
 
 namespace fpga_sim {
 
-enum class ItchType : std::uint8_t { add = 'A', executed = 'E', cancel = 'X', unknown = 0 };
+// A/E/X are the synthetic stream's types. F, C, D, U are added so real NASDAQ files can be
+// replayed: F = Add with MPID (the book treats it as A), C = Executed with price (as E),
+// D = Delete (removes all remaining shares), U = Replace (delete + add under a new reference).
+enum class ItchType : std::uint8_t {
+    add = 'A', add_mpid = 'F', executed = 'E', executed_price = 'C', cancel = 'X',
+    delete_order = 'D', replace = 'U', unknown = 0
+};
 
 struct ItchEvent {
     ItchType type = ItchType::unknown;
     std::uint64_t order_reference = 0;
+    std::uint64_t new_reference = 0;   // Replace only: the reference of the replacement order
     std::uint32_t shares = 0;
     std::uint32_t price_ticks = 0;
     char side = 0;
@@ -74,14 +81,18 @@ private:
     static std::size_t length_for(std::uint8_t type) noexcept {
         switch (type) {
         case 'A': return 36;
+        case 'F': return 40;
         case 'E': return 31;
+        case 'C': return 36;
         case 'X': return 23;
+        case 'D': return 19;
+        case 'U': return 35;
         default: return 0;
         }
     }
     static bool decode(const std::uint8_t* p, std::size_t length, ItchEvent& out) noexcept {
-        if (length == 36 && p[0] == 'A') {
-            out.type = ItchType::add;
+        if ((length == 36 && p[0] == 'A') || (length == 40 && p[0] == 'F')) {
+            out.type = p[0] == 'A' ? ItchType::add : ItchType::add_mpid;
             out.order_reference = u64be(p + 11);
             out.side = static_cast<char>(p[19]);
             out.shares = u32be(p + 20);
@@ -90,8 +101,8 @@ private:
             out.price_ticks = u32be(p + 32);
             return true;
         }
-        if (length == 31 && p[0] == 'E') {
-            out.type = ItchType::executed;
+        if ((length == 31 && p[0] == 'E') || (length == 36 && p[0] == 'C')) {
+            out.type = p[0] == 'E' ? ItchType::executed : ItchType::executed_price;
             out.order_reference = u64be(p + 11);
             out.shares = u32be(p + 19);
             return true;
@@ -100,6 +111,19 @@ private:
             out.type = ItchType::cancel;
             out.order_reference = u64be(p + 11);
             out.shares = u32be(p + 19);
+            return true;
+        }
+        if (length == 19 && p[0] == 'D') {
+            out.type = ItchType::delete_order;
+            out.order_reference = u64be(p + 11);
+            return true;
+        }
+        if (length == 35 && p[0] == 'U') {
+            out.type = ItchType::replace;
+            out.order_reference = u64be(p + 11);
+            out.new_reference = u64be(p + 19);
+            out.shares = u32be(p + 27);
+            out.price_ticks = u32be(p + 31);
             return true;
         }
         return false;

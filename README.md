@@ -126,6 +126,26 @@ order book adds dropped (side full): 0
 VCD trace: fpga_sim_core.vcd
 ```
 
+## Replaying real NASDAQ ITCH 5.0 messages
+
+Besides the synthetic stream, `fpga-sim-itch-replay` replays a bounded slice of a **real** public NASDAQ TotalView-ITCH 5.0 sample through the same parser, order book and cycle model. The latency it prints is still **simulated cycles of this model, now driven by real messages and real inter-arrival times. It is not a hardware measurement** and says nothing about any real FPGA or NIC.
+
+What was run (full detail, provenance and output in [`docs/real-itch-results.md`](docs/real-itch-results.md)):
+
+- File `01302019.NASDAQ_ITCH50.gz` (2019-01-30, 4,764,426,091 bytes) from NASDAQ's public sample directory; only the first 128 MiB was fetched. That slice is 10,672,014 messages covering about 03:04 to 09:30 ET, so pre-market, with few executions.
+- **Real message mix** (all symbols): Add 35.4%, Delete 34.1%, Cancel 10.0%, NOII 9.8%, Replace 4.6%, Add with MPID 3.3%, Market Participant Position 1.8%, Executed 0.4%, everything else under 0.2%.
+- **Real book depth** (full depth rebuilt from the messages, one stock): the busiest stock by adds, RDS.B, had a median of 11 bid and 10 ask price levels (max 47/49); AAPL had a median of 136/143 (max 268/237). The model's book holds 5 levels per side, so it is exceeded after more than 99% of messages and drops adds (counted), which is why only latency, not book contents, is meaningful from the model on real data.
+- **Simulated-cycle latency** on the first 20,000 messages of one stock: RDS.B min 14, median 14, p99 16, max 16 cycles; AAPL min 14, median 16, p99 21, max 105 cycles (bursty executions queue on the wire).
+- The parser gained `F`, `C`, `D` and `U` for this; the synthetic path and its golden test are unchanged.
+
+NASDAQ publishes no licence for the sample and its data policy lists historical ITCH as not eligible for redistribution, so **no NASDAQ bytes are in this repository**. Fetch and replay it yourself:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
+scripts/fetch_itch_sample.sh                         # 128 MiB, prints a SHA-256, runs the replay
+scripts/fetch_itch_sample.sh 134217728 01302019.NASDAQ_ITCH50.gz --symbol AAPL
+```
+
 ## Figures
 
 All figures below are generated from the simulator's own output (the demo's
@@ -168,7 +188,7 @@ the C++ build.
 
 ## What "tests" actually means here
 
-`ctest` runs 9 targets:
+`ctest` runs 10 targets:
 
 - `fpga-sim-demo`: end-to-end run; fails if any pipeline stage reports an
   error (PCS lock/CRC, MAC accept, parse, unknown order reference, ring
@@ -187,6 +207,7 @@ the C++ build.
   `test-phy-pcs` (CRC-32/ISO-HDLC check vector `0xCBF43926`, round trips,
   corrupted block), `test-parser-itch50` (hand-built messages at the documented
   offsets, truncated and unknown-type inputs).
+- `test-real-itch`: hand-built F/C/D/U messages at the spec offsets, framing and message-mix counting, a full-depth book checked by hand, and a replay through the cycle model whose final best quote matches the hand-derived book. No NASDAQ data is used in tests.
 - `test-hot-path-alloc`: see below.
 
 CI runs Release on Ubuntu and macOS plus a Debug ASan+UBSan job.
